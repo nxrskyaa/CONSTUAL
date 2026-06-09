@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .vercel/
+.codex-remote-attachments/
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts

@@ -30,8 +30,8 @@ export const publicClient = createPublicClient({
 export const constualAbi = parseAbi([
   "function createProfile(string displayName,string constualUsername,string xUsername,uint8 preferredLanguage)",
   "function updateProfile(string displayName,string constualUsername,string xUsername,uint8 preferredLanguage)",
-  "function getProfile(address user) view returns ((string displayName,string constualUsername,string xUsername,uint8 preferredLanguage,uint256 xp,uint256 completedQuests,uint256 claimedBadges,uint256 classifierUses,uint256 agentGuides,uint256 createdAt))",
-  "function getMyProfile() view returns ((string displayName,string constualUsername,string xUsername,uint8 preferredLanguage,uint256 xp,uint256 completedQuests,uint256 claimedBadges,uint256 classifierUses,uint256 agentGuides,uint256 createdAt))",
+  "function getProfile(address user) view returns ((string displayName,string constualUsername,string xUsername,uint8 preferredLanguage,uint256 xp,uint256 completedCount,uint256 badgeCount,uint256 streak,uint256 lastActiveDay,uint256 totalScore,uint256 quizCount,uint256 classifierUseCount,uint256 agentGuideCount,uint256 createdAt,uint256 updatedAt,bool exists))",
+  "function getMyProfile() view returns ((string displayName,string constualUsername,string xUsername,uint8 preferredLanguage,uint256 xp,uint256 completedCount,uint256 badgeCount,uint256 streak,uint256 lastActiveDay,uint256 totalScore,uint256 quizCount,uint256 classifierUseCount,uint256 agentGuideCount,uint256 createdAt,uint256 updatedAt,bool exists))",
   "function isProfileCreated(address user) view returns (bool)",
   "function isConstualUsernameAvailable(string username) view returns (bool)",
   "function completeQuest(uint256 diseaseId,uint256 score,uint8 languageUsed)",
