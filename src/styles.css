@@ -949,6 +949,34 @@ p {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.library-section {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 34px;
+}
+
+.library-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.library-heading h2 {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: clamp(1.8rem, 3.8vw, 3.25rem);
+  line-height: 1.04;
+  font-weight: 860;
+}
+
+.library-heading > p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.65;
+}
+
 .module-card span {
   display: inline-flex;
   padding: 8px 12px;
@@ -962,6 +990,130 @@ p {
   display: grid;
   gap: 6px;
   margin-top: auto;
+}
+
+.web3-overview {
+  padding: 22px;
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  background:
+    radial-gradient(circle at 5% 20%, rgba(214, 254, 161, 0.6), transparent 12rem),
+    var(--color-white);
+}
+
+.web3-overview h3 {
+  margin: 0 0 8px;
+  font-size: 1.55rem;
+}
+
+.web3-overview p {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.65;
+}
+
+.web3-module-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.web3-module-card {
+  min-height: 285px;
+  padding: 18px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  color: var(--color-charcoal);
+  text-align: left;
+}
+
+.web3-module-card span,
+.web3-module-card small {
+  color: #5c7b41;
+  font-size: 0.8rem;
+  font-weight: 820;
+}
+
+.web3-module-card h3 {
+  margin: 0;
+  font-size: 1.18rem;
+  line-height: 1.18;
+}
+
+.web3-module-card p {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.web3-issue-visual {
+  position: relative;
+  min-height: 118px;
+  display: grid;
+  place-items: center;
+  border-radius: 26px;
+  overflow: hidden;
+  background: var(--color-lime-soft);
+}
+
+.web3-issue-visual.lime {
+  background: linear-gradient(145deg, #efffdc, #d6fea1);
+}
+
+.web3-issue-visual.blue {
+  background: linear-gradient(145deg, #eef8ff, #bde7ff);
+}
+
+.web3-issue-visual.orange {
+  background: linear-gradient(145deg, #fff5e7, #ffd59a);
+}
+
+.web3-issue-visual.purple {
+  background: linear-gradient(145deg, #f5efff, #d9c4ff);
+}
+
+.web3-issue-visual.pink {
+  background: linear-gradient(145deg, #fff0f5, #ffc5d8);
+}
+
+.web3-issue-visual > span {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: var(--color-charcoal);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.web3-visual-bars {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  display: flex;
+  gap: 5px;
+  align-items: end;
+}
+
+.web3-visual-bars i {
+  width: 8px;
+  border-radius: 999px;
+  background: rgba(15, 20, 36, 0.32);
+}
+
+.web3-visual-bars i:nth-child(1) {
+  height: 18px;
+}
+
+.web3-visual-bars i:nth-child(2) {
+  height: 30px;
+}
+
+.web3-visual-bars i:nth-child(3) {
+  height: 23px;
 }
 
 .learning-layout,
@@ -1032,6 +1184,33 @@ p {
   padding: 22px;
   border-radius: 28px;
   background: linear-gradient(135deg, var(--color-white), var(--color-lime-soft));
+}
+
+.learning-card-flow p:not(.eyebrow),
+.module-intro {
+  color: var(--color-muted);
+  line-height: 1.78;
+}
+
+.module-intro {
+  margin: 16px 0 0;
+  max-width: 780px;
+}
+
+.web3-learning-main {
+  overflow: hidden;
+}
+
+.web3-card-flow {
+  background:
+    radial-gradient(circle at 96% 0%, rgba(214, 254, 161, 0.58), transparent 14rem),
+    linear-gradient(135deg, var(--color-white), var(--color-soft));
+}
+
+.web3-side-card {
+  background:
+    radial-gradient(circle at 80% 10%, rgba(214, 254, 161, 0.45), transparent 12rem),
+    var(--color-white);
 }
 
 .lesson-points {
@@ -2151,6 +2330,18 @@ p {
     var(--color-soft);
 }
 
+.disease-visual.compact {
+  min-height: 118px;
+  width: 100%;
+}
+
+.disease-visual.compact .disease-icon-orbit {
+  right: 16%;
+  top: 14%;
+  width: 42px;
+  height: 42px;
+}
+
 .disease-icon-orbit {
   position: absolute;
   right: 22%;
@@ -2303,7 +2494,8 @@ p {
   }
 
   .module-grid,
-  .badge-grid {
+  .badge-grid,
+  .web3-module-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
@@ -2428,6 +2620,7 @@ p {
   .stats-grid.compact,
   .module-grid,
   .badge-grid,
+  .web3-module-grid,
   .ritual-panel,
   .lesson-points,
   .form-grid,
@@ -2436,6 +2629,13 @@ p {
   .agent-report,
   .people-grid {
     grid-template-columns: 1fr;
+  }
+
+  .library-heading,
+  .web3-overview {
+    grid-template-columns: 1fr;
+    display: grid;
+    align-items: start;
   }
 
   .agent-report div:first-child,

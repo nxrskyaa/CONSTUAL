@@ -78,6 +78,7 @@ type RouteInfo =
   | { name: "library" }
   | { name: "disease"; slug: string }
   | { name: "quiz"; slug: string }
+  | { name: "web3Health"; slug: string }
   | { name: "classifier" }
   | { name: "agent" }
   | { name: "passport" }
@@ -133,6 +134,194 @@ const featureCards = [
   { title: "Leaderboard", copy: "Read Ritual Testnet progress and sort XP client-side.", path: "/leaderboard", icon: Trophy, buddy: "lime" },
 ] as const;
 
+type LocalizedText = { id: string; en: string };
+type LearningSection = {
+  label: LocalizedText;
+  title: LocalizedText;
+  copy: LocalizedText;
+};
+
+type Web3Issue = {
+  slug: string;
+  title: LocalizedText;
+  intro: LocalizedText;
+  readTime: string;
+  tone: CharacterTone;
+  sections: LearningSection[];
+};
+
+const commonColdSections: LearningSection[] = [
+  {
+    label: { id: "Pengertian", en: "Definition" },
+    title: { id: "Apa itu common cold?", en: "What is the common cold?" },
+    copy: {
+      id: "Common cold adalah infeksi saluran napas atas yang paling sering disebabkan virus. Gejalanya biasanya ringan sampai sedang, seperti pilek, bersin, hidung tersumbat, sakit tenggorokan, batuk ringan, dan rasa tidak enak badan. Kondisi ini berbeda dari flu influenza yang umumnya dapat terasa lebih berat.",
+      en: "The common cold is an upper respiratory tract infection most often caused by viruses. Symptoms are usually mild to moderate, such as runny nose, sneezing, nasal congestion, sore throat, mild cough, and feeling unwell. It is different from influenza, which can feel more severe.",
+    },
+  },
+  {
+    label: { id: "Etiologi", en: "Causes" },
+    title: { id: "Penyebab utamanya virus", en: "Viruses are the main cause" },
+    copy: {
+      id: "Rhinovirus adalah penyebab yang sering, tetapi coronavirus musiman, adenovirus, parainfluenza, dan RSV juga dapat menyebabkan gejala mirip pilek. Karena penyebabnya paling sering virus, antibiotik tidak bermanfaat untuk common cold biasa.",
+      en: "Rhinoviruses are a common cause, but seasonal coronaviruses, adenoviruses, parainfluenza viruses, and RSV can also cause cold-like symptoms. Because the cause is usually viral, antibiotics do not help typical common colds.",
+    },
+  },
+  {
+    label: { id: "Cara Penularan", en: "Transmission" },
+    title: { id: "Menular lewat droplet, tangan, dan permukaan", en: "Spread through droplets, hands, and surfaces" },
+    copy: {
+      id: "Virus dapat menyebar saat orang sakit batuk, bersin, berbicara dekat, atau menyentuh benda setelah menyentuh hidung dan mulut. Tangan yang terkontaminasi lalu menyentuh mata, hidung, atau mulut dapat memindahkan virus ke tubuh.",
+      en: "Viruses can spread when a sick person coughs, sneezes, talks closely, or touches objects after touching the nose or mouth. Contaminated hands that touch the eyes, nose, or mouth can transfer the virus into the body.",
+    },
+  },
+  {
+    label: { id: "Faktor Risiko", en: "Risk Factors" },
+    title: { id: "Siapa yang lebih mudah terkena?", en: "Who is more likely to catch it?" },
+    copy: {
+      id: "Risiko meningkat pada anak-anak, orang yang sering berada di tempat ramai, kurang tidur, stres, perokok, dan orang dengan daya tahan tubuh rendah. Musim hujan atau cuaca dingin dapat membuat orang lebih sering berada di ruangan tertutup sehingga penularan lebih mudah terjadi.",
+      en: "Risk is higher in children, people in crowded places, people with poor sleep, stress, smoking exposure, or lower immune defenses. Rainy or cold seasons can keep people indoors, making transmission easier.",
+    },
+  },
+  {
+    label: { id: "Faktor Pencetus", en: "Triggers" },
+    title: { id: "Pemicu yang memperburuk gejala", en: "Triggers that can worsen symptoms" },
+    copy: {
+      id: "Udara kering, asap rokok, polusi, kurang minum, kurang istirahat, dan alergi hidung dapat membuat hidung dan tenggorokan terasa lebih tidak nyaman. Pemicu ini tidak selalu menjadi penyebab infeksi, tetapi bisa memperberat keluhan.",
+      en: "Dry air, cigarette smoke, pollution, dehydration, lack of rest, and nasal allergies can make the nose and throat feel more uncomfortable. These triggers may not cause the infection, but they can worsen symptoms.",
+    },
+  },
+  {
+    label: { id: "Patofisiologi", en: "Pathophysiology" },
+    title: { id: "Mengapa hidung meler dan tersumbat?", en: "Why does the nose run and feel blocked?" },
+    copy: {
+      id: "Saat virus masuk ke mukosa hidung, tubuh merespons dengan peradangan. Pembuluh darah melebar, produksi lendir meningkat, dan jaringan hidung membengkak. Inilah yang menyebabkan pilek, hidung tersumbat, bersin, dan tenggorokan terasa gatal.",
+      en: "When a virus reaches the nasal lining, the body responds with inflammation. Blood vessels widen, mucus production increases, and nasal tissue swells. This leads to runny nose, congestion, sneezing, and an itchy throat.",
+    },
+  },
+  {
+    label: { id: "Gejala Klinis", en: "Symptoms" },
+    title: { id: "Gejala yang sering muncul", en: "Common symptoms" },
+    copy: {
+      id: "Gejala umum meliputi bersin, pilek, hidung tersumbat, sakit tenggorokan, batuk ringan, suara serak, sakit kepala ringan, dan lemas. Demam tinggi, sesak napas, nyeri dada, atau kondisi yang memburuk perlu diperhatikan sebagai tanda untuk mencari bantuan medis.",
+      en: "Common symptoms include sneezing, runny nose, congestion, sore throat, mild cough, hoarse voice, mild headache, and fatigue. High fever, shortness of breath, chest pain, or worsening condition should be treated as reasons to seek medical help.",
+    },
+  },
+  {
+    label: { id: "Diagnosis", en: "Diagnosis" },
+    title: { id: "Biasanya berdasarkan gejala", en: "Usually based on symptoms" },
+    copy: {
+      id: "Common cold biasanya dikenali dari pola gejala dan pemeriksaan sederhana. Tes laboratorium tidak selalu diperlukan. Namun, tenaga kesehatan dapat mempertimbangkan pemeriksaan tambahan bila gejala berat, berlangsung lama, atau ada risiko penyakit lain.",
+      en: "The common cold is usually recognized from symptom patterns and a simple assessment. Laboratory tests are not always needed. A health professional may consider more checks when symptoms are severe, prolonged, or another condition is possible.",
+    },
+  },
+  {
+    label: { id: "Tata Laksana", en: "Management" },
+    title: { id: "Perawatan suportif dan aman", en: "Supportive and safe care" },
+    copy: {
+      id: "Perawatan umum meliputi istirahat, cukup cairan, makan bergizi, menjaga kelembapan udara, dan menggunakan obat bebas sesuai aturan bila diperlukan untuk keluhan seperti demam atau hidung tersumbat. Antibiotik tidak digunakan untuk common cold biasa kecuali ada indikasi infeksi bakteri dari tenaga kesehatan.",
+      en: "General care includes rest, fluids, nutritious meals, humidified air, and over-the-counter medicines as directed when needed for symptoms such as fever or congestion. Antibiotics are not used for typical common colds unless a clinician identifies a bacterial indication.",
+    },
+  },
+  {
+    label: { id: "Komplikasi", en: "Complications" },
+    title: { id: "Kapan perlu lebih waspada?", en: "When to be more cautious" },
+    copy: {
+      id: "Sebagian besar membaik sendiri, tetapi beberapa orang dapat mengalami sinusitis, infeksi telinga, kambuhnya asma, atau infeksi saluran napas bawah. Waspadai gejala yang makin berat, demam tinggi menetap, nyeri telinga berat, sesak, atau batuk yang lama memburuk.",
+      en: "Most cases improve on their own, but some people may develop sinusitis, ear infection, asthma flare, or lower respiratory infection. Watch for worsening symptoms, persistent high fever, severe ear pain, breathlessness, or a cough that keeps getting worse.",
+    },
+  },
+  {
+    label: { id: "Prognosis", en: "Prognosis" },
+    title: { id: "Umumnya membaik dalam beberapa hari", en: "Usually improves within days" },
+    copy: {
+      id: "Common cold biasanya membaik dalam 7-10 hari, walau batuk ringan dapat bertahan lebih lama. Pemulihan lebih nyaman bila tubuh mendapat tidur cukup, cairan, dan tidak dipaksa bekerja terlalu berat saat sakit.",
+      en: "The common cold usually improves within 7-10 days, although a mild cough can last longer. Recovery is more comfortable when the body gets enough sleep, fluids, and is not pushed too hard while sick.",
+    },
+  },
+  {
+    label: { id: "Pencegahan", en: "Prevention" },
+    title: { id: "Kebiasaan kecil yang membantu", en: "Small habits that help" },
+    copy: {
+      id: "Cuci tangan, hindari menyentuh wajah dengan tangan kotor, tutup batuk dan bersin, jaga ventilasi, gunakan masker saat sedang sakit, dan istirahat di rumah bila memungkinkan. Pencegahan juga melindungi orang lain di sekitar kita.",
+      en: "Wash hands, avoid touching the face with dirty hands, cover coughs and sneezes, improve ventilation, wear a mask when sick, and rest at home when possible. Prevention also protects people around us.",
+    },
+  },
+];
+
+const web3Issues: Web3Issue[] = [
+  createWeb3Issue("sleep-deprivation", "Kurang Tidur", "Sleep Deprivation", "lime", [
+    ["Mengapa terjadi di Web3", "Why it happens in Web3", "Market berjalan 24/7, komunitas global aktif lintas zona waktu, listing token sering terjadi larut malam, dan Discord atau Telegram tidak pernah benar-benar tidur. Banyak orang mengorbankan tidur karena takut melewatkan peluang.", "Markets run 24/7, global communities operate across time zones, token listings can happen late at night, and Discord or Telegram never fully sleep. Many people sacrifice sleep because they fear missing opportunities."],
+    ["Dampak jangka pendek", "Short-term impact", "Kurang tidur membuat fokus menurun, mudah lupa, reaksi lebih lambat, mudah marah, dan produktivitas turun. Kesalahan kecil saat membaca data atau mengambil keputusan bisa lebih mudah terjadi.", "Poor sleep reduces focus, memory, reaction speed, emotional control, and productivity. Small mistakes while reading data or making decisions become more likely."],
+    ["Dampak jangka panjang", "Long-term impact", "Jika berlangsung lama, kurang tidur berkaitan dengan risiko hipertensi, diabetes tipe 2, berat badan naik, daya tahan tubuh melemah, depresi, dan kecemasan.", "Over time, sleep deprivation is linked with higher risk of hypertension, type 2 diabetes, weight gain, weaker immunity, depression, and anxiety."],
+    ["Solusi praktis", "Practical solutions", "Prioritaskan tidur 7-9 jam, buat jam tidur yang konsisten, matikan notifikasi saat tidur, dan jangan normalisasi begadang sebagai budaya produktivitas.", "Prioritize 7-9 hours of sleep, keep a regular sleep schedule, turn off notifications during sleep, and do not normalize all-night work as productivity culture."],
+    ["Pesan kunci", "Key message", "Tidur hanya 4-5 jam dapat menurunkan performa berpikir hingga mirip kondisi intoksikasi ringan. Tidur adalah fondasi kerja otak.", "Sleeping only 4-5 hours can reduce thinking performance to a level similar to mild intoxication. Sleep is a foundation for brain performance."],
+  ]),
+  createWeb3Issue("digital-eye-strain", "Mata Lelah", "Digital Eye Strain", "blue", [
+    ["Mengapa terjadi", "Why it happens", "Jam coding panjang, Discord, proposal governance, chart watching, dan membaca thread membuat mata jarang beristirahat.", "Long coding hours, Discord, governance proposals, chart watching, and reading threads mean the eyes rarely rest."],
+    ["Gejala", "Symptoms", "Mata kering, perih, penglihatan buram sementara, sakit kepala, dan mata terasa berat sering muncul setelah paparan layar yang panjang.", "Dry eyes, sore eyes, temporary blurred vision, headaches, and heavy eyes commonly appear after long screen exposure."],
+    ["Penjelasan sederhana", "Simple explanation", "Saat fokus ke layar, frekuensi berkedip turun. Lapisan air mata lebih cepat menguap sehingga mata terasa kering dan tidak nyaman.", "When focusing on screens, blinking frequency decreases. The tear film evaporates faster, making the eyes dry and uncomfortable."],
+    ["Solusi praktis", "Practical solutions", "Gunakan aturan 20-20-20, berkedip lebih sering, atur pencahayaan ruangan, dan beri waktu istirahat mata secara teratur.", "Use the 20-20-20 rule, blink more often, improve room lighting, and rest the eyes regularly."],
+    ["Pesan kunci", "Key message", "Masalah utamanya bukan radiasi layar, tetapi paparan layar yang terlalu lama tanpa jeda.", "The main issue is not screen radiation, but long uninterrupted screen exposure."],
+  ]),
+  createWeb3Issue("neck-back-pain", "Nyeri Leher dan Punggung", "Neck and Back Pain", "orange", [
+    ["Mengapa terjadi", "Why it happens", "Bekerja dari sofa, kasur, laptop tanpa meja ergonomis, dan terlalu lama menunduk membuat otot leher, bahu, dan punggung bekerja berlebihan.", "Working from a sofa, bed, laptop without an ergonomic desk, and looking down for long hours overload the neck, shoulder, and back muscles."],
+    ["Gejala", "Symptoms", "Leher kaku, bahu tegang, nyeri punggung bawah, dan sakit kepala tegang sering muncul setelah duduk lama.", "Stiff neck, tight shoulders, lower back pain, and tension headaches often appear after long sitting."],
+    ["Dampak jangka panjang", "Long-term impact", "Jika kebiasaan ini berlanjut, postur dapat memburuk, nyeri menjadi kronis, dan produktivitas turun karena tubuh terus merasa tidak nyaman.", "If this continues, posture can worsen, pain can become chronic, and productivity can drop because the body stays uncomfortable."],
+    ["Solusi praktis", "Practical solutions", "Berdiri setiap 30-60 menit, gunakan kursi dengan penyangga punggung, posisikan monitor sejajar mata, dan lakukan peregangan ringan.", "Stand every 30-60 minutes, use a chair with back support, keep the monitor at eye level, and stretch regularly."],
+    ["Pesan kunci", "Key message", "Tubuh manusia berevolusi untuk bergerak, bukan duduk sepanjang hari.", "The human body evolved to move, not to sit all day."],
+  ]),
+  createWeb3Issue("stress-anxiety", "Stres dan Kecemasan", "Stress and Anxiety", "purple", [
+    ["Mengapa terjadi", "Why it happens", "Harga yang volatil, kompetisi tinggi, FOMO, tekanan performa proyek, dan ekspektasi komunitas dapat membuat sistem stres aktif terus-menerus.", "Volatile prices, intense competition, FOMO, project performance pressure, and community expectations can keep the stress system constantly active."],
+    ["Gejala", "Symptoms", "Sulit tidur, jantung berdebar, sulit fokus, mudah panik, dan mudah tersinggung dapat muncul saat stres menumpuk.", "Trouble sleeping, palpitations, poor focus, panic, and irritability can appear when stress builds up."],
+    ["Penjelasan medis sederhana", "Simple medical explanation", "Tubuh melepas hormon stres seperti kortisol dan adrenalin. Jika berlangsung lama, efeknya dapat memengaruhi kesehatan fisik dan mental.", "The body releases stress hormones such as cortisol and adrenaline. If this continues over time, it can affect physical and mental health."],
+    ["Solusi praktis", "Practical solutions", "Batasi waktu memantau market, olahraga teratur, latihan relaksasi, dan pertahankan aktivitas di luar Web3.", "Limit market-watching time, exercise regularly, practice relaxation, and keep activities outside Web3."],
+    ["Pesan kunci", "Key message", "Tidak setiap red candle membutuhkan respons emosional.", "Not every red candle needs an emotional response."],
+  ]),
+  createWeb3Issue("burnout", "Burnout", "Burnout", "pink", [
+    ["Bedanya dengan stres", "Difference from stress", "Stres terasa seperti: saya masih bisa bekerja, tetapi tertekan. Burnout terasa seperti: saya tidak lagi punya energi untuk peduli.", "Stress feels like: I can still work, but I feel pressured. Burnout feels like: I no longer have the energy to care."],
+    ["Tanda", "Signs", "Kelelahan berat, hilang motivasi, sinis terhadap pekerjaan, dan produktivitas menurun adalah tanda yang perlu diperhatikan.", "Exhaustion, loss of motivation, cynicism toward work, and lower productivity are signs to notice."],
+    ["Mengapa umum di Web3", "Why it is common in Web3", "Batas kerja dan hidup pribadi kabur. Discord, Telegram, komunitas, dan market aktif 24/7 sehingga tubuh tidak pernah benar-benar pulih.", "The boundary between work and personal life is blurred. Discord, Telegram, communities, and markets stay active 24/7, so the body never fully recovers."],
+    ["Solusi praktis", "Practical solutions", "Tetapkan jam kerja, ambil waktu istirahat, delegasikan tugas, dan jadwalkan hari tanpa pekerjaan.", "Set working hours, take time off, delegate tasks, and schedule days off."],
+    ["Pesan kunci", "Key message", "Burnout bukan kelemahan. Burnout adalah sinyal bahwa tubuh dan pikiran butuh pemulihan.", "Burnout is not weakness. It is a signal that the body and mind need recovery."],
+  ]),
+  createWeb3Issue("physical-inactivity", "Kurang Aktivitas Fisik", "Physical Inactivity", "lime", [
+    ["Mengapa penting", "Why it matters", "Terlalu banyak duduk berkaitan dengan penyakit jantung, diabetes, obesitas, dan risiko kematian dini, bahkan pada orang yang berolahraga secara teratur.", "Too much sitting is linked with heart disease, diabetes, obesity, and early death, even in people who exercise regularly."],
+    ["Efek awal", "Early effects", "Mudah lelah, berat badan naik, kebugaran menurun, dan tubuh terasa kaku dapat menjadi sinyal awal kurang gerak.", "Getting tired easily, weight gain, lower fitness, and stiffness can be early signs of too little movement."],
+    ["Solusi praktis", "Practical solutions", "Targetkan minimal 150 menit aktivitas fisik per minggu, berjalan saat online meeting, gunakan standing desk bila memungkinkan, dan pilih tangga jika aman.", "Aim for at least 150 minutes of physical activity per week, walk during online meetings, use a standing desk if possible, and take the stairs when safe."],
+    ["Penjelasan sederhana", "Simple explanation", "Otot membantu tubuh menggunakan gula dan energi. Saat duduk terlalu lama, sistem ini bekerja lebih lambat.", "Muscles help the body use sugar and energy. When sitting too long, this system works more slowly."],
+    ["Pesan kunci", "Key message", "Tubuh tidak tahu kamu sedang trading, coding, atau scrolling. Tubuh hanya tahu kamu sudah duduk terlalu lama.", "Your body does not know whether you are trading, coding, or scrolling. It only knows you have been sitting too long."],
+  ]),
+  createWeb3Issue("excessive-caffeine", "Konsumsi Kafein Berlebihan", "Excessive Caffeine Intake", "orange", [
+    ["Mengapa umum", "Why it is common", "Budaya 'one more coffee', grinding semalaman, dan anggapan tidur itu untuk orang lemah membuat kafein sering dipakai untuk menutupi kurang istirahat.", "The culture of one more coffee, grinding all night, and sleep-is-for-losers makes caffeine a common way to cover lack of rest."],
+    ["Efek", "Effects", "Kafein berlebihan dapat menyebabkan jantung berdebar, tremor, sulit tidur, kecemasan meningkat, dan gejala refluks atau asam lambung.", "Too much caffeine can cause palpitations, tremor, trouble sleeping, increased anxiety, and reflux or stomach acid symptoms."],
+    ["Solusi praktis", "Practical solutions", "Batasi asupan kafein, cukup minum air, dan jangan gunakan kopi sebagai pengganti tidur.", "Limit caffeine intake, drink enough water, and do not use coffee as a replacement for sleep."],
+    ["Penjelasan sederhana", "Simple explanation", "Kafein dapat menunda rasa kantuk, tetapi tidak menghapus kebutuhan biologis tubuh untuk tidur.", "Caffeine can delay sleepiness, but it does not remove the body's biological need for sleep."],
+    ["Pesan kunci", "Key message", "Kopi bisa membantu fokus sesaat, tetapi pemulihan tetap membutuhkan tidur.", "Coffee can support short-term focus, but recovery still needs sleep."],
+  ]),
+  createWeb3Issue("irregular-eating", "Pola Makan Tidak Teratur", "Irregular Eating Pattern", "pink", [
+    ["Mengapa umum", "Why it is common", "Deadline, launch, market crash, dan meeting membuat makan sering dianggap prioritas rendah.", "Deadlines, launches, market crashes, and meetings can make eating feel like a low priority."],
+    ["Efek", "Effects", "Pola makan tidak teratur dapat berkaitan dengan berat badan naik, masalah pencernaan, konsentrasi turun, dan risiko penyakit metabolik lebih tinggi.", "Irregular eating can be linked with weight gain, digestive issues, lower concentration, and higher metabolic disease risk."],
+    ["Solusi praktis", "Practical solutions", "Jadwalkan waktu makan, tambah protein dan serat, kurangi makanan ultra-proses, dan siapkan camilan sehat.", "Schedule meals, increase protein and fiber, reduce ultra-processed foods, and prepare healthy snacks."],
+    ["Penjelasan sederhana", "Simple explanation", "Otak butuh energi stabil. Saat makan tidak teratur, fokus dan mood bisa ikut naik turun.", "The brain needs stable energy. When meals are irregular, focus and mood can fluctuate."],
+    ["Pesan kunci", "Key message", "Tubuh butuh nutrisi konsisten agar otak bisa bekerja dengan baik.", "The body needs consistent nutrition to keep the brain performing well."],
+  ]),
+  createWeb3Issue("social-isolation", "Isolasi Sosial", "Social Isolation", "blue", [
+    ["Mengapa terjadi", "Why it happens", "Seseorang bisa berinteraksi dengan ribuan akun, aktif di banyak server, dan ikut banyak spaces, tetapi tetap merasa kesepian.", "A person may interact with thousands of accounts, be active in many servers, and join many spaces, yet still feel lonely."],
+    ["Dampak", "Effects", "Isolasi sosial berkaitan dengan risiko depresi, kecemasan, dan kualitas hidup yang lebih rendah.", "Social isolation is linked with higher risk of depression, anxiety, and lower quality of life."],
+    ["Solusi praktis", "Practical solutions", "Jaga hubungan keluarga, temui teman secara langsung, dan ikuti aktivitas offline yang membuat tubuh dan emosi terasa hadir.", "Maintain family relationships, meet friends in person, and join offline activities that make the body and emotions feel present."],
+    ["Penjelasan sederhana", "Simple explanation", "Interaksi digital bisa berguna, tetapi manusia tetap membutuhkan koneksi yang terasa aman, nyata, dan timbal balik.", "Digital interaction can be useful, but humans still need connection that feels safe, real, and reciprocal."],
+    ["Pesan kunci", "Key message", "Koneksi internet yang kuat tidak selalu berarti koneksi sosial yang kuat.", "A strong internet connection does not always mean a strong social connection."],
+  ]),
+  createWeb3Issue("doomscrolling", "Doomscrolling dan Information Overload", "Doomscrolling and Information Overload", "purple", [
+    ["Mengapa terjadi", "Why it happens", "Dalam satu jam seseorang bisa membuka X, Discord, Telegram, CoinMarketCap, berita crypto, dan forum komunitas. Otak menerima terlalu banyak sinyal sekaligus.", "Within one hour, a person may open X, Discord, Telegram, CoinMarketCap, crypto news, and community forums. The brain receives too many signals at once."],
+    ["Efek", "Effects", "Sulit fokus, lelah mental, kecemasan meningkat, dan gangguan tidur dapat muncul saat informasi masuk tanpa jeda.", "Poor focus, mental fatigue, increased anxiety, and sleep problems can appear when information arrives without breaks."],
+    ["Solusi praktis", "Practical solutions", "Jadwalkan waktu khusus membaca berita, matikan notifikasi yang tidak penting, dan gunakan waktu bebas layar.", "Schedule specific news-reading time, turn off unnecessary notifications, and use screen-free time."],
+    ["Penjelasan sederhana", "Simple explanation", "Otak butuh waktu untuk memproses informasi, bukan hanya menerima informasi.", "The brain needs time to process information, not only receive information."],
+    ["Pesan kunci", "Key message", "Tidak semua update harus diproses saat itu juga.", "Not every update needs to be processed immediately."],
+  ]),
+];
+
 function App() {
   const [route, setRoute] = useState<RouteInfo>(() => parseRoute(window.location.pathname));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -168,6 +357,7 @@ function App() {
   const ritualConfigured = config.chains.some((chain) => chain.id === RITUAL_CHAIN_ID);
   const wrongNetwork = Boolean(account && chainId !== RITUAL_CHAIN_ID);
   const currentDisease = route.name === "disease" || route.name === "quiz" ? diseaseBySlug(route.slug) : diseases[0];
+  const currentWeb3Issue = route.name === "web3Health" ? web3IssueBySlug(route.slug) : web3Issues[0];
   const profileCreatedRead = useReadContract({
     address: CONSTUAL_CORE_ADDRESS,
     abi: constualAbi,
@@ -599,6 +789,7 @@ function App() {
     leaderboardError,
     loadLeaderboard,
     currentDisease,
+    currentWeb3Issue,
   });
 
   return (
@@ -663,6 +854,7 @@ type RenderProps = {
   leaderboardError: string;
   loadLeaderboard: () => void;
   currentDisease: Disease;
+  currentWeb3Issue: Web3Issue;
 };
 
 function renderRoute(props: RenderProps) {
@@ -677,6 +869,8 @@ function renderRoute(props: RenderProps) {
       return <DiseasePage disease={props.currentDisease} navigate={props.navigate} completed={props.completedMap[props.currentDisease.id]} />;
     case "quiz":
       return <QuizPage {...props} disease={props.currentDisease} />;
+    case "web3Health":
+      return <Web3HealthPage issue={props.currentWeb3Issue} navigate={props.navigate} />;
     case "classifier":
       return <ClassifierPage {...props} />;
     case "agent":
@@ -793,28 +987,75 @@ function LibraryPage({
 }) {
   return (
     <AppPage title="Disease Library" kicker="Bilingual learning modules">
-      <div className="module-grid">
-        {diseases.map((disease, index) => (
-          <motion.button
-            className="module-card card"
-            key={disease.id}
-            onClick={() => navigate(`/disease/${slugForDisease(disease)}`)}
-            type="button"
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.04 }}
-          >
-            <WellnessCharacter tone={["lime", "blue", "orange", "purple", "pink"][index] as CharacterTone} small />
-            <span>{disease.localName}</span>
-            <h3>{disease.name}</h3>
-            <p>{disease.summary}</p>
-            <div className="status-row">
-              <small>{completedMap[disease.id] ? "Quest complete" : "Ready to learn"}</small>
-              <small>{badgeMap[disease.id] ? "Badge claimed" : "Badge available after quiz"}</small>
-            </div>
-          </motion.button>
-        ))}
-      </div>
+      <section className="library-section">
+        <div className="library-heading">
+          <div>
+            <p className="eyebrow">Core Health Topics</p>
+            <h2>Learn before you take the quiz.</h2>
+          </div>
+          <p>Structured bilingual modules for everyday health literacy, classifier context, and privacy-safe learning proof.</p>
+        </div>
+        <div className="module-grid">
+          {diseases.map((disease, index) => (
+            <motion.button
+              className="module-card card"
+              key={disease.id}
+              onClick={() => navigate(`/disease/${slugForDisease(disease)}`)}
+              type="button"
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.04 }}
+            >
+              <DiseaseVisual diseaseId={disease.id} compact />
+              <span>Core Topic - {disease.localName}</span>
+              <h3>{disease.name}</h3>
+              <p>{disease.summary}</p>
+              <div className="status-row">
+                <small>Estimated read: 6-8 min</small>
+                <small>{completedMap[disease.id] ? "Quest complete" : "Start Learning"}</small>
+                <small>{badgeMap[disease.id] ? "Badge claimed" : "Badge available after quiz"}</small>
+              </div>
+            </motion.button>
+          ))}
+        </div>
+      </section>
+
+      <section className="library-section web3-library">
+        <div className="library-heading">
+          <div>
+            <p className="eyebrow">Web3 Health Issues</p>
+            <h2>Healthy habits for a 24/7 digital community.</h2>
+          </div>
+          <p>Web3 builders do not need to leave technology to stay healthy. They need habits that let the body work well inside a fast, always-on environment.</p>
+        </div>
+        <div className="card web3-overview">
+          <WellnessCharacter tone="lime" />
+          <div>
+            <h3>The four biggest root issues</h3>
+            <p>Sleep deprivation, physical inactivity, chronic stress, and excessive screen exposure are interconnected. Over time, they can raise risk for hypertension, diabetes, obesity, mental health problems, and lower quality of life.</p>
+          </div>
+        </div>
+        <div className="web3-module-grid">
+          {web3Issues.map((issue, index) => (
+            <motion.button
+              className="card web3-module-card"
+              key={issue.slug}
+              onClick={() => navigate(`/web3-health-issues/${issue.slug}`)}
+              type="button"
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.025 }}
+            >
+              <Web3IssueVisual tone={issue.tone} index={index} />
+              <span>Web3 Health - {issue.title.id}</span>
+              <h3>{issue.title.en}</h3>
+              <p>{issue.intro.en}</p>
+              <small>{issue.readTime} - Start Learning</small>
+            </motion.button>
+          ))}
+        </div>
+      </section>
     </AppPage>
   );
 }
@@ -877,6 +1118,69 @@ function DiseasePage({
           <h3>{completed ? "Quest completed" : "Ready for quiz"}</h3>
           <p>{language === 0 ? "Baca kartu pembelajaran singkat, lalu lanjut ke kuis untuk bukti belajar." : "Read short learning cards, then continue to the quiz for proof-of-learning."}</p>
           <button className="btn btn-dark" onClick={() => navigate(`/disease/${slugForDisease(disease)}/quiz`)} type="button">Open Quiz</button>
+        </aside>
+      </section>
+    </AppPage>
+  );
+}
+
+function Web3HealthPage({ issue, navigate }: { issue: Web3Issue; navigate: (path: string) => void }) {
+  const [language, setLanguage] = useState(0);
+  const [step, setStep] = useState(0);
+  const activeSection = issue.sections[step] ?? issue.sections[0];
+  const progress = ((step + 1) / issue.sections.length) * 100;
+
+  return (
+    <AppPage title={language === 0 ? issue.title.id : issue.title.en} kicker="Web3 Health Issues">
+      <section className="learning-layout web3-learning-layout">
+        <div className="card learning-main web3-learning-main">
+          <div className="learning-topline">
+            <Web3IssueVisual tone={issue.tone} index={web3Issues.findIndex((item) => item.slug === issue.slug)} />
+            <div className="language-toggle">
+              <Languages size={18} />
+              <button className={language === 0 ? "active" : ""} onClick={() => setLanguage(0)} type="button">Indonesia</button>
+              <button className={language === 1 ? "active" : ""} onClick={() => setLanguage(1)} type="button">English</button>
+            </div>
+          </div>
+          <p className="module-intro">{language === 0 ? issue.intro.id : issue.intro.en}</p>
+          <div className="module-meta">
+            <span>{issue.readTime}</span>
+            <span>{language === 0 ? "Praktis" : "Practical"}</span>
+            <span>{language === 0 ? "Web3 lifestyle" : "Web3 lifestyle"}</span>
+          </div>
+          <div className="progress-track">
+            <span style={{ width: `${progress}%` }} />
+          </div>
+          <motion.div className="learning-card-flow web3-card-flow" key={`${issue.slug}-${language}-${step}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <p className="eyebrow">{language === 0 ? activeSection.label.id : activeSection.label.en}</p>
+            <h2>{language === 0 ? activeSection.title.id : activeSection.title.en}</h2>
+            <p>{language === 0 ? activeSection.copy.id : activeSection.copy.en}</p>
+          </motion.div>
+          <div className="lesson-points">
+            <InfoPill title={language === 0 ? "Makna" : "Meaning"} copy={language === 0 ? "Web3 sehat bukan berarti keluar dari teknologi, tetapi membangun batas dan ritme yang menjaga tubuh." : "Healthy Web3 does not mean leaving technology; it means building boundaries and rhythms that protect the body."} />
+            <InfoPill title={language === 0 ? "Langkah kecil" : "Small step"} copy={language === 0 ? "Pilih satu kebiasaan yang bisa dilakukan hari ini, bukan mengubah semuanya sekaligus." : "Choose one habit you can practice today instead of changing everything at once."} />
+            <InfoPill title="Safety" copy={language === 0 ? "Cari bantuan profesional bila keluhan berat, menetap, atau mengganggu aktivitas harian." : "Seek professional help when symptoms are severe, persistent, or disrupt daily life."} />
+          </div>
+          <div className="action-row">
+            <button className="btn btn-secondary" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))} type="button">Previous</button>
+            {step < issue.sections.length - 1 ? (
+              <button className="btn btn-lime" onClick={() => setStep((value) => Math.min(issue.sections.length - 1, value + 1))} type="button">Next</button>
+            ) : (
+              <button className="btn btn-lime" onClick={() => navigate("/library")} type="button">Back to Library</button>
+            )}
+          </div>
+        </div>
+        <aside className="card side-card web3-side-card">
+          <h3>{language === 0 ? "Ringkasan Web3 sehat" : "Healthy Web3 summary"}</h3>
+          <p>
+            {language === 0
+              ? "Masalah tidur, gerak, stres, dan layar saling terhubung. Perbaikan kecil di satu area sering membantu area lain."
+              : "Sleep, movement, stress, and screen exposure are connected. Small improvements in one area often help the others."}
+          </p>
+          <div className="not-grid">
+            {(language === 0 ? ["Tidur", "Gerak", "Stres", "Layar"] : ["Sleep", "Movement", "Stress", "Screens"]).map((item) => <span key={item}>{item}</span>)}
+          </div>
+          <button className="btn btn-dark" onClick={() => navigate("/library")} type="button">Open Library</button>
         </aside>
       </section>
     </AppPage>
@@ -1301,16 +1605,12 @@ function AboutPage({ navigate }: { navigate: (path: string) => void }) {
       <section className="about-story">
         <motion.div className="card about-hero-card" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}>
           <div>
-            <p className="eyebrow">About Constual</p>
-            <h2>About Constual</h2>
+            <p className="eyebrow">Caring, Modern, Trusted, Calm</p>
+            <h2>Health learning with privacy-safe proof.</h2>
             <p>
               A bilingual health education dApp on Ritual Testnet designed to make common health learning simple,
               visual, and privacy-safe.
             </p>
-            <button className="btn btn-lime" onClick={() => navigate("/app")} type="button">
-              Enter Constual
-              <ChevronRight size={17} />
-            </button>
           </div>
           <div className="about-orbit">
             <AboutVisual />
@@ -1771,15 +2071,26 @@ function WellnessCharacter({ tone, small = false, className = "" }: { tone: Char
   );
 }
 
-function DiseaseVisual({ diseaseId }: { diseaseId: number }) {
+function DiseaseVisual({ diseaseId, compact = false }: { diseaseId: number; compact?: boolean }) {
   const tone = (["lime", "blue", "orange", "purple", "pink"][(diseaseId - 1) % 5] ?? "lime") as CharacterTone;
   const Icon = diseases.find((disease) => disease.id === diseaseId)?.icon ?? Leaf;
   return (
-    <div className="disease-visual">
-      <WellnessCharacter tone={tone} />
+    <div className={compact ? "disease-visual compact" : "disease-visual"}>
+      <WellnessCharacter tone={tone} small={compact} />
       <div className="disease-icon-orbit">
         <Icon size={24} />
       </div>
+    </div>
+  );
+}
+
+function Web3IssueVisual({ tone, index }: { tone: CharacterTone; index: number }) {
+  const labels = ["Sleep", "Eyes", "Posture", "Stress", "Burnout", "Move", "Coffee", "Meals", "Social", "Info"];
+  return (
+    <div className={`web3-issue-visual ${tone}`}>
+      <WellnessCharacter tone={tone} small />
+      <span>{labels[index] ?? "Web3"}</span>
+      <div className="web3-visual-bars"><i /><i /><i /></div>
     </div>
   );
 }
@@ -1870,6 +2181,8 @@ function parseRoute(pathname: string): RouteInfo {
   if (path === "/passport") return { name: "passport" };
   if (path === "/leaderboard") return { name: "leaderboard" };
   if (path === "/about") return { name: "about" };
+  const web3Health = path.match(/^\/web3-health-issues\/([^/]+)$/);
+  if (web3Health) return { name: "web3Health", slug: web3Health[1] };
   const quiz = path.match(/^\/disease\/([^/]+)\/quiz$/);
   if (quiz) return { name: "quiz", slug: quiz[1] };
   const disease = path.match(/^\/disease\/([^/]+)$/);
@@ -1879,7 +2192,7 @@ function parseRoute(pathname: string): RouteInfo {
 
 function isActiveRoute(route: RouteInfo, path: string) {
   if (path === "/app") return route.name === "app";
-  if (path === "/library") return route.name === "library" || route.name === "disease" || route.name === "quiz";
+  if (path === "/library") return route.name === "library" || route.name === "disease" || route.name === "quiz" || route.name === "web3Health";
   return parseRoute(path).name === route.name;
 }
 
@@ -1889,6 +2202,28 @@ function slugForDisease(disease: Disease) {
 
 function diseaseBySlug(slug: string) {
   return diseases.find((disease) => slugForDisease(disease) === slug) ?? diseases[0];
+}
+
+function web3IssueBySlug(slug: string) {
+  return web3Issues.find((issue) => issue.slug === slug) ?? web3Issues[0];
+}
+
+function createWeb3Issue(slug: string, titleId: string, titleEn: string, tone: CharacterTone, sections: [string, string, string, string][]): Web3Issue {
+  return {
+    slug,
+    title: { id: titleId, en: titleEn },
+    intro: {
+      id: `${titleId} adalah isu kesehatan yang sering muncul di komunitas Web3 karena ritme kerja digital yang panjang, lintas zona waktu, dan selalu aktif.`,
+      en: `${titleEn} is a health issue that often appears in Web3 communities because digital work can be long, cross-time-zone, and always active.`,
+    },
+    readTime: "5-7 min",
+    tone,
+    sections: sections.map(([labelId, labelEn, copyId, copyEn]) => ({
+      label: { id: labelId, en: labelEn },
+      title: { id: labelId, en: labelEn },
+      copy: { id: copyId, en: copyEn },
+    })),
+  };
 }
 
 type LearningCard = {
@@ -1906,26 +2241,39 @@ type QuizCard = {
 
 function getLearningSections(diseaseId: number, language: number): LearningCard[] {
   const disease = diseases.find((item) => item.id === diseaseId) ?? diseases[0];
+  if (diseaseId === 1) {
+    return commonColdSections.map((section) => ({
+      label: language === 0 ? section.label.id : section.label.en,
+      title: language === 0 ? section.title.id : section.title.en,
+      copy: language === 0 ? section.copy.id : section.copy.en,
+    }));
+  }
   const enBase = [
     ["Definition", `${disease.name} basics`, disease.summary],
-    ["Etiology", "Common causes", "Learn the usual causes and triggers so you can understand risk without self-diagnosing."],
-    ["Risk Factors", "What can increase risk", "Age, environment, daily habits, family history, and exposure patterns can change risk depending on the topic."],
-    ["Symptoms", "Signs to notice", "Symptoms are learning signals. They are not enough for diagnosis without qualified assessment."],
-    ["Diagnosis basics", "How clinicians confirm", "Health workers combine history, examination, and appropriate tests rather than relying on one number or symptom."],
-    ["Treatment basics", "Care is personal", "Treatment decisions belong with qualified professionals. Constual only teaches safe concepts."],
-    ["Prevention", "Small habits help", "Prevention usually combines hygiene, sleep, movement, nutrition, environmental control, and screening where relevant."],
-    ["Red flags", "Know when care is urgent", "Severe, sudden, persistent, or worsening symptoms should be checked promptly, especially breathing trouble, bleeding, confusion, or fainting."],
+    ["Why it matters", "Health literacy context", `${disease.name} education helps users understand common warning signs, prevention ideas, and when professional care matters without turning the app into diagnosis.`],
+    ["Causes", "Common causes and mechanisms", "This topic can involve infection, lifestyle, environment, genetics, or body-system changes depending on the disease. Learning the cause helps users avoid unsafe assumptions."],
+    ["Risk Factors", "What can increase risk", "Age, environment, daily habits, family history, exposure patterns, nutrition, sleep, and existing conditions can change risk depending on the topic."],
+    ["Symptoms", "Signs to notice", "Symptoms are learning signals. They help users pay attention, but they are not enough for diagnosis without qualified assessment."],
+    ["Diagnosis basics", "How clinicians confirm", "Health workers combine history, examination, and appropriate tests rather than relying on one number, one symptom, or one online answer."],
+    ["Management basics", "Care is personal", "Treatment decisions belong with qualified professionals. Constual explains safe concepts, supportive habits, and questions users can bring to care."],
+    ["Food and daily habits", "Everyday support", "Balanced meals, hydration, sleep, movement, hygiene, and avoiding harmful habits can support general health while users seek proper guidance when needed."],
+    ["Prevention", "Small habits help", "Prevention usually combines hygiene, sleep, movement, nutrition, environmental control, screening, and early care where relevant."],
+    ["Red flags", "Know when care is urgent", "Severe, sudden, persistent, or worsening symptoms should be checked promptly, especially breathing trouble, bleeding, confusion, fainting, chest pain, or severe dehydration."],
+    ["Common myths", "Avoid unsafe shortcuts", "Do not use antibiotics, supplements, extreme diets, or medication changes without proper indication and professional guidance."],
     ["Summary", "Ready for quiz", "Review the key ideas, then take the quiz to record privacy-safe proof-of-learning."],
   ];
   const idBase = [
     ["Pengertian", `Dasar ${disease.localName}`, disease.lesson],
-    ["Etiologi", "Penyebab umum", "Pelajari penyebab dan pemicu umum agar kamu memahami risiko tanpa mendiagnosis diri sendiri."],
-    ["Faktor Risiko", "Hal yang meningkatkan risiko", "Usia, lingkungan, kebiasaan, riwayat keluarga, dan pola paparan dapat memengaruhi risiko sesuai topik."],
-    ["Gejala", "Tanda yang perlu diamati", "Gejala adalah sinyal pembelajaran, bukan dasar diagnosis tanpa pemeriksaan tenaga kesehatan."],
-    ["Dasar Diagnosis", "Cara tenaga kesehatan memastikan", "Tenaga kesehatan menggabungkan riwayat, pemeriksaan, dan tes yang sesuai, bukan satu angka atau gejala saja."],
-    ["Dasar Terapi", "Perawatan bersifat personal", "Keputusan terapi harus bersama tenaga kesehatan. Constual hanya mengajarkan konsep aman."],
-    ["Pencegahan", "Kebiasaan kecil membantu", "Pencegahan biasanya menggabungkan kebersihan, tidur, gerak, nutrisi, kontrol lingkungan, dan skrining bila relevan."],
-    ["Tanda Bahaya", "Kapan harus segera mencari bantuan", "Gejala berat, mendadak, menetap, atau memburuk perlu diperiksa segera, terutama sesak, perdarahan, bingung, atau pingsan."],
+    ["Mengapa penting", "Konteks literasi kesehatan", `Edukasi ${disease.localName} membantu pengguna memahami tanda umum, ide pencegahan, dan kapan perlu bantuan profesional tanpa menjadikan aplikasi sebagai alat diagnosis.`],
+    ["Penyebab", "Penyebab dan mekanisme umum", "Topik kesehatan dapat berkaitan dengan infeksi, gaya hidup, lingkungan, genetik, atau perubahan sistem tubuh. Memahami penyebab membantu pengguna menghindari asumsi yang tidak aman."],
+    ["Faktor Risiko", "Hal yang meningkatkan risiko", "Usia, lingkungan, kebiasaan harian, riwayat keluarga, pola paparan, nutrisi, tidur, dan kondisi yang sudah ada dapat memengaruhi risiko sesuai topik."],
+    ["Gejala", "Tanda yang perlu diamati", "Gejala adalah sinyal pembelajaran. Gejala membantu pengguna memperhatikan tubuh, tetapi bukan dasar diagnosis tanpa pemeriksaan tenaga kesehatan."],
+    ["Dasar Diagnosis", "Cara tenaga kesehatan memastikan", "Tenaga kesehatan menggabungkan riwayat, pemeriksaan, dan tes yang sesuai, bukan hanya satu angka, satu gejala, atau satu jawaban online."],
+    ["Dasar Tata Laksana", "Perawatan bersifat personal", "Keputusan terapi harus bersama tenaga kesehatan. Constual menjelaskan konsep aman, kebiasaan pendukung, dan pertanyaan yang bisa dibawa saat konsultasi."],
+    ["Makanan dan Kebiasaan", "Dukungan sehari-hari", "Makan seimbang, hidrasi, tidur, gerak, kebersihan, dan menghindari kebiasaan berbahaya dapat mendukung kesehatan umum sambil mencari arahan yang tepat bila perlu."],
+    ["Pencegahan", "Kebiasaan kecil membantu", "Pencegahan biasanya menggabungkan kebersihan, tidur, gerak, nutrisi, kontrol lingkungan, skrining, dan pemeriksaan dini bila relevan."],
+    ["Tanda Bahaya", "Kapan harus segera mencari bantuan", "Gejala berat, mendadak, menetap, atau memburuk perlu diperiksa segera, terutama sesak, perdarahan, bingung, pingsan, nyeri dada, atau dehidrasi berat."],
+    ["Mitos Umum", "Hindari jalan pintas yang tidak aman", "Jangan menggunakan antibiotik, suplemen, diet ekstrem, atau mengubah obat tanpa indikasi yang tepat dan arahan profesional."],
     ["Ringkasan", "Siap kuis", "Tinjau ide utama, lalu ikuti kuis untuk mencatat bukti belajar yang aman secara privasi."],
   ];
   return (language === 0 ? idBase : enBase).map(([label, title, copy]) => ({ label, title, copy }));
@@ -1933,6 +2281,63 @@ function getLearningSections(diseaseId: number, language: number): LearningCard[
 
 function getQuizQuestions(diseaseId: number, language: number): QuizCard[] {
   const disease = diseases.find((item) => item.id === diseaseId) ?? diseases[0];
+  if (diseaseId === 1) {
+    if (language === 0) {
+      return [
+        {
+          question: "Apa penyebab paling umum common cold?",
+          options: ["Virus", "Bakteri yang selalu butuh antibiotik", "Kurang minum saja"],
+          answer: 0,
+          explanation: "Common cold paling sering disebabkan virus, sehingga antibiotik tidak digunakan untuk pilek biasa tanpa indikasi bakteri.",
+        },
+        {
+          question: "Bagaimana common cold dapat menular?",
+          options: ["Droplet, tangan, dan permukaan terkontaminasi", "Hanya dari makanan pedas", "Hanya karena udara dingin"],
+          answer: 0,
+          explanation: "Virus dapat berpindah lewat batuk/bersin, tangan, dan permukaan, terutama saat tangan menyentuh mata, hidung, atau mulut.",
+        },
+        {
+          question: "Kapan seseorang perlu lebih waspada?",
+          options: ["Sesak napas, demam tinggi menetap, nyeri dada, atau kondisi memburuk", "Bersin sekali", "Hidung meler ringan satu hari"],
+          answer: 0,
+          explanation: "Tanda berat atau memburuk perlu penilaian medis, bukan hanya perawatan mandiri.",
+        },
+        {
+          question: "Apa langkah perawatan suportif yang aman?",
+          options: ["Istirahat, cukup cairan, makan bergizi, dan obat sesuai aturan bila perlu", "Minum antibiotik sendiri", "Tetap memaksa begadang"],
+          answer: 0,
+          explanation: "Perawatan suportif membantu pemulihan. Obat harus digunakan sesuai aturan dan antibiotik tidak untuk pilek virus biasa.",
+        },
+      ];
+    }
+
+    return [
+      {
+        question: "What is the most common cause of the common cold?",
+        options: ["Viruses", "Bacteria that always need antibiotics", "Only not drinking enough water"],
+        answer: 0,
+        explanation: "The common cold is most often viral, so antibiotics do not help typical colds without a bacterial indication.",
+      },
+      {
+        question: "How can the common cold spread?",
+        options: ["Droplets, hands, and contaminated surfaces", "Only from spicy food", "Only from cold air"],
+        answer: 0,
+        explanation: "Viruses can spread through coughs/sneezes, hands, and surfaces, especially when hands touch the eyes, nose, or mouth.",
+      },
+      {
+        question: "When should someone be more cautious?",
+        options: ["Breathlessness, persistent high fever, chest pain, or worsening condition", "One sneeze", "A mild runny nose for one day"],
+        answer: 0,
+        explanation: "Severe or worsening signs need medical assessment, not only self-care.",
+      },
+      {
+        question: "What is a safe supportive care step?",
+        options: ["Rest, fluids, nutritious meals, and medicine as directed when needed", "Self-start antibiotics", "Force yourself to stay up all night"],
+        answer: 0,
+        explanation: "Supportive care helps recovery. Medicines should be used as directed, and antibiotics are not for typical viral colds.",
+      },
+    ];
+  }
   if (language === 0) {
     return [
       {
