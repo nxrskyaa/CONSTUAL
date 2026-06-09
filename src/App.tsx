@@ -19,8 +19,6 @@ import {
   Moon,
   Network,
   ShieldCheck,
-  Sparkles,
-  Star,
   Trophy,
   UserRound,
   Wallet,
@@ -978,6 +976,13 @@ function ClassifierPage({
     <AppPage title="Constual Classifier" kicker={copy.kicker}>
       <section className="classifier-layout">
         <div className="card classifier-card">
+          <div className="classifier-intro">
+            <ClassifierVisual kind={classifierKind} tone="neutral" />
+            <div>
+              <h2>{copy.introTitle}</h2>
+              <p>{copy.introCopy}</p>
+            </div>
+          </div>
           <div className="classifier-topline">
             <div className="language-toggle">
               <Languages size={18} />
@@ -1077,52 +1082,81 @@ function AgentPage({
 }: RenderProps) {
   const answer = agentLanguage === 0 ? selectedAgentScenario.report.id : selectedAgentScenario.report.en;
   return (
-    <AppPage title="Constual Agent" kicker="Simulated bilingual guidance">
+    <AppPage title="Constual Agent" kicker="Simulated bilingual health guidance">
+      <section className="card agent-hero-card">
+        <div>
+          <p className="eyebrow">Frontend-only preset assistant</p>
+          <h2>A calm guide for learning, not diagnosis.</h2>
+          <p>
+            Pick a preset question, watch the simulated typing state, then switch the same answer between Indonesia and
+            English without calling an API.
+          </p>
+        </div>
+        <AgentVisual />
+      </section>
       <section className="agent-layout">
         <aside className="card scenario-list">
+          <div className="scenario-heading">
+            <span>Preset questions</span>
+            <strong>{agentScenarios.length} topics</strong>
+          </div>
           {agentScenarios.map((scenario) => (
-            <button key={scenario.id} onClick={() => generateAgent(scenario)} type="button">
+            <button className={scenario.id === selectedAgentScenario.id ? "active" : ""} key={scenario.id} onClick={() => generateAgent(scenario)} type="button">
               <span>{scenario.id}</span>
               {scenario.title}
             </button>
           ))}
         </aside>
         <div className="card chat-panel">
-          <div className="language-toggle">
-            <Languages size={18} />
-            <button className={agentLanguage === 0 ? "active" : ""} onClick={() => setAgentLanguage(0)} type="button">Indonesia</button>
-            <button className={agentLanguage === 1 ? "active" : ""} onClick={() => setAgentLanguage(1)} type="button">English</button>
+          <div className="chat-toolbar">
+            <div>
+              <span>Constual Agent</span>
+              <strong>{selectedAgentScenario.title}</strong>
+            </div>
+            <div className="language-toggle">
+              <Languages size={18} />
+              <button className={agentLanguage === 0 ? "active" : ""} onClick={() => setAgentLanguage(0)} type="button">Indonesia</button>
+              <button className={agentLanguage === 1 ? "active" : ""} onClick={() => setAgentLanguage(1)} type="button">English</button>
+            </div>
           </div>
           <div className="user-bubble">{agentLanguage === 0 ? selectedAgentScenario.user.id : selectedAgentScenario.user.en}</div>
           {!agentReady ? (
-            <div className="typing"><span /><span /><span /> Constual Agent is typing</div>
+            <div className="typing-card">
+              <WellnessCharacter tone="lime" small />
+              <div className="typing"><span /><span /><span /> Constual Agent is typing</div>
+            </div>
           ) : (
             <motion.div className="agent-report" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <ReportLine label="Explanation" value={answer.explanation} />
-              <ReportLine label="Learning meaning" value={answer.meaning} />
-              <ReportLine label="Food guidance" value={answer.food} />
-              <ReportLine label="Lifestyle guidance" value={answer.lifestyle} />
-              <ReportLine label="Safety reminder" value={answer.safety} />
+              <ReportLine label={agentLanguage === 0 ? "Penjelasan" : "Explanation"} value={answer.explanation} />
+              <ReportLine label={agentLanguage === 0 ? "Makna belajar" : "Learning meaning"} value={answer.meaning} />
+              <ReportLine label={agentLanguage === 0 ? "Panduan makanan" : "Food guidance"} value={answer.food} />
+              <ReportLine label={agentLanguage === 0 ? "Panduan gaya hidup" : "Lifestyle guidance"} value={answer.lifestyle} />
+              <ReportLine label={agentLanguage === 0 ? "Pengingat keselamatan" : "Safety reminder"} value={answer.safety} />
             </motion.div>
           )}
-          <div className="module-buttons">
-            {selectedAgentScenario.diseaseIds.length ? (
-              selectedAgentScenario.diseaseIds.map((id) => {
-                const disease = diseases.find((item) => item.id === id);
-                return disease ? (
-                  <button key={id} onClick={() => navigate(`/disease/${slugForDisease(disease)}`)} type="button">
-                    {agentLanguage === 0 ? disease.localName : disease.name}
-                  </button>
-                ) : null;
-              })
-            ) : (
-              <button onClick={() => navigate("/classifier")} type="button">Open Constual Classifier</button>
-            )}
+          <div className="agent-footer">
+            <div>
+              <strong>{agentLanguage === 0 ? "Rekomendasi modul" : "Recommended module"}</strong>
+              <div className="module-buttons">
+                {selectedAgentScenario.diseaseIds.length ? (
+                  selectedAgentScenario.diseaseIds.map((id) => {
+                    const disease = diseases.find((item) => item.id === id);
+                    return disease ? (
+                      <button key={id} onClick={() => navigate(`/disease/${slugForDisease(disease)}`)} type="button">
+                        {agentLanguage === 0 ? disease.localName : disease.name}
+                      </button>
+                    ) : null;
+                  })
+                ) : (
+                  <button onClick={() => navigate("/classifier")} type="button">Open Constual Classifier</button>
+                )}
+              </div>
+            </div>
+            <button className="btn btn-secondary" disabled={!agentReady || busy === "agent"} onClick={recordAgentGuide} type="button">
+              {busy === "agent" ? <Loader2 className="spin" size={18} /> : <ShieldCheck size={18} />}
+              Record Agent Guide Proof
+            </button>
           </div>
-          <button className="btn btn-lime" disabled={!agentReady || busy === "agent"} onClick={recordAgentGuide} type="button">
-            {busy === "agent" ? <Loader2 className="spin" size={18} /> : <ShieldCheck size={18} />}
-            Record Agent Guide Proof
-          </button>
         </div>
       </section>
     </AppPage>
@@ -1256,9 +1290,9 @@ function LeaderboardPage({ leaderboard, leaderboardError, loadLeaderboard }: Ren
 function AboutPage({ navigate }: { navigate: (path: string) => void }) {
   const futureItems = [
     "More disease modules",
-    "More visual learning experiences",
-    "Better simulated agent guidance",
-    "Ritual-native AI inference exploration",
+    "Better interactive learning",
+    "Richer agent guidance",
+    "Future Ritual-native AI exploration",
     "Community health education campaigns",
   ];
 
@@ -1268,10 +1302,10 @@ function AboutPage({ navigate }: { navigate: (path: string) => void }) {
         <motion.div className="card about-hero-card" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}>
           <div>
             <p className="eyebrow">About Constual</p>
-            <h2>A bilingual health education dApp on Ritual Testnet.</h2>
+            <h2>About Constual</h2>
             <p>
-              Constual makes common health learning simple, visual, and privacy-safe through modules, classifiers,
-              simulated guidance, quizzes, badges, and proof-of-learning.
+              A bilingual health education dApp on Ritual Testnet designed to make common health learning simple,
+              visual, and privacy-safe.
             </p>
             <button className="btn btn-lime" onClick={() => navigate("/app")} type="button">
               Enter Constual
@@ -1279,10 +1313,7 @@ function AboutPage({ navigate }: { navigate: (path: string) => void }) {
             </button>
           </div>
           <div className="about-orbit">
-            <HeroBuddyGroup compact />
-            <FloatingHealthCard label="Passport" />
-            <FloatingHealthCard label="Learning Badge" className="about-float-two" />
-            <FloatingHealthCard label="Ritual Proof" className="about-float-three" />
+            <AboutVisual />
           </div>
         </motion.div>
 
@@ -1303,11 +1334,19 @@ function AboutPage({ navigate }: { navigate: (path: string) => void }) {
             icon={ShieldCheck}
           />
           <div className="card about-copy">
-            <Sparkles size={28} />
+            <BadgeCheck size={28} />
             <h2>Feature system</h2>
-            <div className="not-grid">
-              {["Constual Passport", "Disease Library", "Classifier", "Agent", "Quiz and Badge", "Leaderboard", "Proof of Learning"].map((item) => (
-                <span key={item}>{item}</span>
+            <div className="about-feature-list">
+              {[
+                ["Constual Passport", "Learning identity, XP, badges, X avatar."],
+                ["Disease Library", "Bilingual modules before quizzes."],
+                ["Classifier", "Frontend-only education for BP, sugar, and BMI."],
+                ["Agent", "Simulated bilingual preset guidance."],
+                ["Quiz & Badge", "Proof-of-learning after passing modules."],
+                ["Leaderboard", "Ritual Testnet progress sorted by XP."],
+                ["Proof of Learning", "Learning progress without medical records."],
+              ].map(([title, copy]) => (
+                <span key={title}><strong>{title}</strong>{copy}</span>
               ))}
             </div>
           </div>
@@ -1335,7 +1374,7 @@ function AboutPage({ navigate }: { navigate: (path: string) => void }) {
             <h2>Privacy-safe design</h2>
             <p>
               Constual does not store raw blood pressure, blood sugar, height, weight, symptoms, diagnosis, medication,
-              or medical history onchain. It stores learning proof, XP, badges, and progress only.
+              or medical history onchain. It stores learning proof, XP, badge progress, and privacy-safe activity only.
             </p>
           </div>
           <div className="card about-copy">
@@ -1347,17 +1386,25 @@ function AboutPage({ navigate }: { navigate: (path: string) => void }) {
               ))}
             </div>
           </div>
-          <div className="card about-copy creator-card">
+          <div className="card about-copy people-section">
             <UserRound size={28} />
-            <h2>Creator & Builder</h2>
-            <h3>Nxrskyaa</h3>
-            <p>
-              Indonesia-based Web3 content creator and builder exploring real-world blockchain applications for health
-              literacy, education, and AI-assisted learning.
-            </p>
-            <div className="action-row">
-              <a className="btn btn-secondary" href="https://github.com/nxrskyaa" rel="noreferrer" target="_blank">GitHub</a>
-              <a className="btn btn-secondary" href="https://x.com/nxrskyaa" rel="noreferrer" target="_blank">X</a>
+            <h2>Builder & Contributor</h2>
+            <div className="people-grid">
+              <PersonCard
+                role="Builder"
+                name="Nxrskyaa"
+                xUsername="nxrskyaa"
+                github="https://github.com/nxrskyaa"
+                xUrl="https://x.com/nxrskyaa"
+                copy="Indonesia-based Web3 content creator and builder exploring real-world blockchain applications for health literacy, education, and AI-assisted learning."
+              />
+              <PersonCard
+                role="Contributor"
+                name="Rikky Dwiyanto"
+                xUsername="rikkydwiyanto"
+                xUrl="https://x.com/rikkydwiyanto"
+                copy="Contributor supporting Constual's health education direction, product polish, and community-ready learning experience."
+              />
             </div>
           </div>
           <div className="card about-copy safety-card">
@@ -1374,10 +1421,47 @@ function AboutPage({ navigate }: { navigate: (path: string) => void }) {
 
 function AboutCard({ title, copy, icon: Icon }: { title: string; copy: string; icon: LucideIcon }) {
   return (
-    <div className="card about-copy">
+    <motion.div className="card about-copy" initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
       <Icon size={28} />
       <h2>{title}</h2>
       <p>{copy}</p>
+    </motion.div>
+  );
+}
+
+function PersonCard({
+  role,
+  name,
+  xUsername,
+  github,
+  xUrl,
+  copy,
+}: {
+  role: string;
+  name: string;
+  xUsername: string;
+  github?: string;
+  xUrl: string;
+  copy: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const avatar = failed
+    ? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(name)}`
+    : `https://unavatar.io/x/${encodeURIComponent(xUsername)}`;
+
+  return (
+    <div className="person-card">
+      <img src={avatar} alt={`${name} avatar`} onError={() => setFailed(true)} />
+      <div>
+        <span>{role}</span>
+        <h3>{name}</h3>
+        <p>@{xUsername}</p>
+      </div>
+      <p>{copy}</p>
+      <div className="person-links">
+        {github && <a href={github} rel="noreferrer" target="_blank">GitHub</a>}
+        <a href={xUrl} rel="noreferrer" target="_blank">X</a>
+      </div>
     </div>
   );
 }
@@ -1619,11 +1703,34 @@ function HeroBuddyGroup({ compact = false }: { compact?: boolean }) {
       <WellnessCharacter tone="lime" className="buddy b1" />
       <WellnessCharacter tone="blue" className="buddy b2" />
       <WellnessCharacter tone="orange" className="buddy b3" />
-      <WellnessCharacter tone="purple" className="buddy b4" />
-      <WellnessCharacter tone="pink" className="buddy b5" />
       <FloatingHealthCard label="Learning Badge" className="float-card f1" />
       <FloatingHealthCard label="Ritual Proof" className="float-card f2" />
     </motion.div>
+  );
+}
+
+function AboutVisual() {
+  return (
+    <div className="about-visual">
+      <div className="about-visual-card passport">
+        <ConstualMark />
+        <span>Learning Passport</span>
+        <strong>Privacy-safe progress</strong>
+      </div>
+      <div className="about-visual-card badge">
+        <BadgeCheck size={24} />
+        <span>Badge proof</span>
+        <strong>Ritual Testnet</strong>
+      </div>
+      <div className="about-visual-card proof">
+        <ShieldCheck size={24} />
+        <span>No medical records</span>
+        <strong>Learning only</strong>
+      </div>
+      <WellnessCharacter tone="lime" className="about-buddy a1" />
+      <WellnessCharacter tone="blue" className="about-buddy a2" />
+      <WellnessCharacter tone="pink" className="about-buddy a3" />
+    </div>
   );
 }
 
@@ -1633,6 +1740,17 @@ function HeroMiniMockup() {
       <WellnessCharacter tone="lime" />
       <FloatingHealthCard label="Passport" />
       <FloatingHealthCard label="Ritual Proof" />
+    </div>
+  );
+}
+
+function AgentVisual() {
+  return (
+    <div className="agent-visual">
+      <WellnessCharacter tone="lime" />
+      <div className="agent-orbit-card food">Food guidance</div>
+      <div className="agent-orbit-card life">Lifestyle</div>
+      <div className="agent-orbit-card safe">Safety first</div>
     </div>
   );
 }
@@ -1669,7 +1787,7 @@ function DiseaseVisual({ diseaseId }: { diseaseId: number }) {
 function FloatingHealthCard({ label, className = "" }: { label: string; className?: string }) {
   return (
     <div className={`floating-health-card ${className}`}>
-      <Sparkles size={15} />
+      <span className="chip-dot" />
       <span>{label}</span>
     </div>
   );
@@ -2110,6 +2228,8 @@ function getClassifierCopy(language: number) {
   if (language === 0) {
     return {
       kicker: "Pemeriksa angka untuk edukasi",
+      introTitle: "Pilih alat edukasi",
+      introCopy: "Masukkan angka untuk melihat kategori belajar. Ini bukan diagnosis dan tidak menyimpan nilai medis.",
       bp: "Cek Tensi",
       sugar: "Gula Darah",
       systolic: "Sistolik",
@@ -2134,6 +2254,8 @@ function getClassifierCopy(language: number) {
 
   return {
     kicker: "Education-focused number checks",
+    introTitle: "Choose an education tool",
+    introCopy: "Enter numbers to see a learning category. This is not diagnosis and does not store medical values.",
     bp: "Blood Pressure",
     sugar: "Blood Sugar",
     systolic: "Systolic",

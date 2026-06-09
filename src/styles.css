@@ -498,17 +498,25 @@ p {
 
 .floating-health-card {
   min-height: 42px;
-  padding: 0 14px;
+  padding: 0 16px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   width: fit-content;
   border: 1px solid rgba(15, 20, 36, 0.1);
   border-radius: 999px;
   color: var(--color-charcoal);
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 12px 34px rgba(15, 20, 36, 0.1);
-  font-weight: 820;
+  font-weight: 760;
+}
+
+.chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #85d654;
+  box-shadow: 0 0 0 4px rgba(214, 254, 161, 0.48);
 }
 
 .float-card {
@@ -518,13 +526,13 @@ p {
 }
 
 .float-card.f1 {
-  top: 13%;
-  left: 7%;
+  top: 10%;
+  left: 4%;
 }
 
 .float-card.f2 {
-  right: 0;
-  bottom: 16%;
+  right: 3%;
+  bottom: 13%;
   animation-delay: -1.2s;
 }
 
@@ -635,32 +643,20 @@ p {
 }
 
 .b1 {
-  top: 4%;
-  right: 12%;
+  top: 7%;
+  right: 13%;
 }
 
 .b2 {
-  top: 35%;
-  left: 0;
+  top: 38%;
+  left: 2%;
   animation-delay: -1s;
 }
 
 .b3 {
   right: 5%;
-  top: 43%;
+  top: 49%;
   animation-delay: -2.2s;
-}
-
-.b4 {
-  left: 13%;
-  bottom: 4%;
-  animation-delay: -3.1s;
-}
-
-.b5 {
-  right: 21%;
-  bottom: 0;
-  animation-delay: -4s;
 }
 
 .landing-section {
@@ -1118,6 +1114,33 @@ p {
   gap: 18px;
 }
 
+.classifier-intro {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, var(--color-white), var(--color-lime-soft));
+}
+
+.classifier-intro .classifier-visual {
+  width: 86px;
+  border-radius: 28px;
+}
+
+.classifier-intro h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.15;
+}
+
+.classifier-intro p {
+  margin: 6px 0 0;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
 .classifier-layout {
   display: grid;
   grid-template-columns: minmax(280px, 0.76fr) minmax(0, 1.24fr);
@@ -1200,7 +1223,7 @@ p {
   color: var(--color-charcoal);
   font-size: clamp(1.9rem, 3.4vw, 3.35rem);
   line-height: 1.02;
-  font-weight: 900;
+  font-weight: 860;
 }
 
 .result-hero p,
@@ -1497,6 +1520,93 @@ p {
   grid-template-columns: 310px minmax(0, 1fr);
 }
 
+.agent-hero-card {
+  min-height: 300px;
+  margin-bottom: 18px;
+  padding: clamp(22px, 4vw, 38px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 24px;
+  align-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 88% 20%, rgba(214, 254, 161, 0.55), transparent 16rem),
+    var(--color-white);
+}
+
+.agent-hero-card h2 {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: clamp(1.8rem, 3.6vw, 3.2rem);
+  line-height: 1.02;
+  font-weight: 860;
+}
+
+.agent-hero-card p {
+  max-width: 680px;
+  color: var(--color-muted);
+  line-height: 1.7;
+}
+
+.agent-visual {
+  position: relative;
+  min-height: 230px;
+  display: grid;
+  place-items: center;
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(214, 254, 161, 0.62), transparent 9rem),
+    var(--color-navy);
+}
+
+.agent-orbit-card {
+  position: absolute;
+  min-height: 36px;
+  padding: 0 13px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  color: var(--color-charcoal);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 30px rgba(15, 20, 36, 0.16);
+  font-size: 0.82rem;
+  font-weight: 780;
+  animation: float 5.8s ease-in-out infinite;
+}
+
+.agent-orbit-card.food {
+  left: 20px;
+  top: 28px;
+}
+
+.agent-orbit-card.life {
+  right: 20px;
+  top: 86px;
+  animation-delay: -1.4s;
+}
+
+.agent-orbit-card.safe {
+  left: 52px;
+  bottom: 30px;
+  animation-delay: -2.3s;
+}
+
+.scenario-heading {
+  padding: 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.scenario-heading span {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 760;
+}
+
+.scenario-heading strong {
+  font-size: 1.12rem;
+}
+
 .scenario-list {
   max-height: 680px;
   padding: 12px;
@@ -1516,7 +1626,12 @@ p {
   color: var(--color-charcoal);
   background: var(--color-soft);
   text-align: left;
-  font-weight: 760;
+  font-weight: 720;
+}
+
+.scenario-list button.active {
+  background: var(--color-lime-soft);
+  box-shadow: inset 0 0 0 1px rgba(127, 178, 78, 0.22);
 }
 
 .scenario-list span {
@@ -1536,6 +1651,39 @@ p {
   border-radius: 26px 26px 8px 26px;
   color: var(--color-white);
   background: var(--color-navy);
+}
+
+.chat-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.chat-toolbar > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.chat-toolbar span {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 760;
+}
+
+.chat-toolbar strong {
+  font-size: 1.18rem;
+}
+
+.typing-card {
+  min-height: 132px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-radius: 24px;
+  background: var(--color-soft);
 }
 
 .typing {
@@ -1563,7 +1711,8 @@ p {
 
 .agent-report {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .agent-report div {
@@ -1572,10 +1721,30 @@ p {
   background: var(--color-soft);
 }
 
+.agent-report div:first-child,
+.agent-report div:last-child {
+  grid-column: span 2;
+}
+
 .agent-report p {
   margin: 6px 0 0;
   color: var(--color-muted);
   line-height: 1.6;
+}
+
+.agent-footer {
+  margin-top: 18px;
+  padding-top: 16px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--color-line);
+}
+
+.agent-footer > div {
+  min-width: min(100%, 360px);
 }
 
 .module-buttons button {
@@ -1688,7 +1857,7 @@ p {
 }
 
 .about-hero-card {
-  min-height: 520px;
+  min-height: 460px;
   padding: clamp(24px, 5vw, 48px);
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
@@ -1703,9 +1872,9 @@ p {
 .about-hero-card h2 {
   margin: 0;
   color: var(--color-charcoal);
-  font-size: clamp(2.1rem, 5vw, 4.5rem);
-  line-height: 0.98;
-  font-weight: 900;
+  font-size: clamp(2rem, 4.5vw, 4rem);
+  line-height: 1;
+  font-weight: 860;
 }
 
 .about-hero-card p {
@@ -1716,30 +1885,7 @@ p {
 
 .about-orbit {
   position: relative;
-  min-height: 470px;
-}
-
-.about-orbit .hero-visual {
-  min-height: 440px;
-}
-
-.about-orbit .floating-health-card {
-  position: absolute;
-  left: 7%;
-  top: 10%;
-  z-index: 8;
-}
-
-.about-orbit .about-float-two {
-  left: auto;
-  right: 7%;
-  top: 48%;
-}
-
-.about-orbit .about-float-three {
-  left: 18%;
-  top: auto;
-  bottom: 8%;
+  min-height: 390px;
 }
 
 .about-grid.extended {
@@ -1822,6 +1968,25 @@ p {
   font-weight: 800;
 }
 
+.about-feature-list {
+  display: grid;
+  gap: 10px;
+}
+
+.about-feature-list span {
+  padding: 12px 14px;
+  display: grid;
+  gap: 3px;
+  border-radius: 20px;
+  background: var(--color-soft);
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+
+.about-feature-list strong {
+  color: var(--color-charcoal);
+}
+
 .creator-card {
   background: var(--color-lime-soft);
 }
@@ -1835,6 +2000,144 @@ p {
   background:
     radial-gradient(circle at 90% 15%, rgba(214, 254, 161, 0.5), transparent 12rem),
     var(--color-white);
+}
+
+.about-visual {
+  position: relative;
+  min-height: 390px;
+  border-radius: 40px;
+  background:
+    radial-gradient(circle at 52% 46%, rgba(214, 254, 161, 0.54), transparent 12rem),
+    var(--color-navy);
+  overflow: hidden;
+}
+
+.about-visual-card {
+  position: absolute;
+  width: min(72%, 280px);
+  padding: 18px;
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 26px;
+  color: var(--color-white);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(14px);
+}
+
+.about-visual-card span {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.82rem;
+  font-weight: 760;
+}
+
+.about-visual-card strong {
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.about-visual-card .constual-mark {
+  width: 38px;
+  height: 38px;
+}
+
+.about-visual-card.passport {
+  left: 9%;
+  top: 12%;
+}
+
+.about-visual-card.badge {
+  right: 8%;
+  top: 37%;
+  width: min(58%, 230px);
+}
+
+.about-visual-card.proof {
+  left: 16%;
+  bottom: 10%;
+  width: min(60%, 240px);
+}
+
+.about-buddy {
+  position: absolute;
+}
+
+.about-buddy.a1 {
+  right: 15%;
+  top: 10%;
+}
+
+.about-buddy.a2 {
+  left: 9%;
+  top: 49%;
+}
+
+.about-buddy.a3 {
+  right: 10%;
+  bottom: 8%;
+}
+
+.people-section {
+  grid-column: span 2;
+}
+
+.people-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.person-card {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr);
+  gap: 12px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(33, 33, 29, 0.08);
+}
+
+.person-card img {
+  width: 66px;
+  height: 66px;
+  border-radius: 22px;
+  object-fit: cover;
+  background: var(--color-lime-soft);
+}
+
+.person-card span {
+  color: #5c7b41;
+  font-size: 0.8rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.person-card h3 {
+  margin: 3px 0 0;
+  font-size: 1.35rem;
+}
+
+.person-card p {
+  grid-column: span 2;
+  margin: 0;
+}
+
+.person-links {
+  grid-column: span 2;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.person-links a {
+  padding: 9px 13px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  color: var(--color-charcoal);
+  background: var(--color-white);
+  font-weight: 820;
+  text-decoration: none;
 }
 
 .disease-visual {
@@ -1975,6 +2278,7 @@ p {
 
   .landing-hero,
   .dashboard-hero,
+  .agent-hero-card,
   .learning-layout,
   .classifier-layout,
   .agent-layout,
@@ -1989,7 +2293,7 @@ p {
   }
 
   .about-orbit {
-    min-height: 460px;
+    min-height: 390px;
   }
 
   .feature-grid,
@@ -2128,8 +2432,16 @@ p {
   .lesson-points,
   .form-grid,
   .education-grid,
-  .future-timeline {
+  .future-timeline,
+  .agent-report,
+  .people-grid {
     grid-template-columns: 1fr;
+  }
+
+  .agent-report div:first-child,
+  .agent-report div:last-child,
+  .people-section {
+    grid-column: auto;
   }
 
   .result-hero {
@@ -2183,13 +2495,7 @@ p {
   }
 
   .about-orbit {
-    min-height: 390px;
-  }
-
-  .about-orbit .hero-visual {
-    min-height: 380px;
-    transform: scale(0.78);
-    transform-origin: center;
+    min-height: 330px;
   }
 
   .segmented,
@@ -2202,6 +2508,14 @@ p {
 
   .result-panel {
     align-items: flex-start;
+  }
+
+  .classifier-intro {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-visual {
+    min-height: 210px;
   }
 
   .scenario-list {
@@ -2275,6 +2589,35 @@ p {
 
   .phone-mock {
     width: 88%;
+  }
+
+  .about-visual {
+    min-height: 310px;
+    border-radius: 30px;
+  }
+
+  .about-visual-card {
+    padding: 14px;
+    border-radius: 22px;
+  }
+
+  .about-visual-card.passport {
+    left: 5%;
+    top: 9%;
+  }
+
+  .about-visual-card.badge {
+    right: 5%;
+    top: 40%;
+  }
+
+  .about-visual-card.proof {
+    left: 8%;
+    bottom: 7%;
+  }
+
+  .about-buddy {
+    transform: scale(0.78);
   }
 
   .landing-hero,
