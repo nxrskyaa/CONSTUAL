@@ -1052,6 +1052,7 @@ p {
 .web3-issue-visual {
   position: relative;
   min-height: 118px;
+  padding: 16px;
   display: grid;
   place-items: center;
   border-radius: 26px;
@@ -1087,6 +1088,39 @@ p {
   border-radius: 999px;
   color: var(--color-charcoal);
   background: rgba(255, 255, 255, 0.62);
+}
+
+.web3-learning-main .learning-topline {
+  align-items: center;
+}
+
+.web3-learning-main .web3-issue-visual {
+  width: clamp(132px, 16vw, 168px);
+  min-height: clamp(132px, 16vw, 168px);
+  padding: 22px;
+  flex: 0 0 auto;
+  overflow: visible;
+  border-radius: 34px;
+  box-shadow:
+    inset 0 16px 28px rgba(255, 255, 255, 0.42),
+    0 18px 42px rgba(15, 20, 36, 0.1);
+}
+
+.web3-learning-main .web3-issue-visual .wellness-character {
+  transform: translateY(4px);
+}
+
+.web3-learning-main .web3-issue-visual > span {
+  left: 16px;
+  top: 16px;
+  padding: 7px 11px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 8px 20px rgba(15, 20, 36, 0.08);
+}
+
+.web3-learning-main .web3-visual-bars {
+  right: 18px;
+  bottom: 16px;
 }
 
 .web3-visual-bars {
@@ -2714,6 +2748,18 @@ p {
     grid-template-columns: 1fr;
   }
 
+  .web3-learning-main .web3-issue-visual {
+    width: 124px;
+    min-height: 124px;
+    padding: 18px;
+    border-radius: 30px;
+  }
+
+  .web3-learning-main .web3-issue-visual > span {
+    left: 14px;
+    top: 14px;
+  }
+
   .agent-visual {
     min-height: 210px;
   }
@@ -2818,6 +2864,17 @@ p {
 
   .about-buddy {
     transform: scale(0.78);
+  }
+
+  .web3-learning-main .web3-issue-visual {
+    width: 112px;
+    min-height: 112px;
+    padding: 16px;
+  }
+
+  .web3-learning-main .web3-issue-visual .wellness-character.small {
+    width: 48px;
+    height: 46px;
   }
 
   .landing-hero,
