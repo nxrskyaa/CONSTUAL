@@ -135,10 +135,6 @@ export async function sendConstualTransaction(
   return hash;
 }
 
-export function categoryHash(category: string) {
-  return keccak256(toBytes(category));
-}
-
 export function guideProofHash(scenarioId: number, language: number, walletAddress: Address) {
   return keccak256(toBytes(`${scenarioId}:${language}:${walletAddress}`));
 }

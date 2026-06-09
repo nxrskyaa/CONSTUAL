@@ -5,8 +5,11 @@ import {
   BookOpen,
   Bot,
   Check,
+  ChevronDown,
   ChevronRight,
+  Copy,
   Droplets,
+  ExternalLink,
   Heart,
   Home,
   Languages,
@@ -26,10 +29,9 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getAddress, type Address } from "viem";
-import { useAccount, useChainId, useConfig, useConnect, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
+import { useAccount, useChainId, useConfig, useConnect, useDisconnect, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
 import { agentScenarios, diseases, languageLabels, type AgentScenario, type Disease } from "./data";
 import {
-  categoryHash,
   CONSTUAL_CORE_ADDRESS,
   constualAbi,
   guideProofHash,
@@ -150,7 +152,6 @@ function App() {
   const [bp, setBp] = useState({ systolic: "", diastolic: "" });
   const [sugar, setSugar] = useState({ value: "", mode: "fasting" });
   const [bmi, setBmi] = useState({ height: "", weight: "" });
-  const [lastClassifier, setLastClassifier] = useState<{ type: number; category: string; label: string } | null>(null);
   const [selectedScenario, setSelectedScenario] = useState<AgentScenario>(agentScenarios[0]);
   const [agentLanguage, setAgentLanguage] = useState(0);
   const [agentReady, setAgentReady] = useState(true);
@@ -162,6 +163,7 @@ function App() {
   const chainId = useChainId();
   const config = useConfig();
   const { connectors, connectAsync } = useConnect();
+  const { disconnect } = useDisconnect();
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
   const account = address ?? null;
@@ -209,6 +211,20 @@ function App() {
       console.error(error);
       showToast("Wallet connection was cancelled.", "error");
     }
+  };
+
+  const disconnectWallet = () => {
+    disconnect();
+    setProfileCreated(false);
+    setProfile(emptyProfile);
+    setProfileForm(emptyForm);
+    setCompletedDiseaseIds([]);
+    setCompletedMap({});
+    setBadgeMap({});
+    setCanBadgeMap({});
+    setLeaderboard([]);
+    setReadNonce((value) => value + 1);
+    showToast("Wallet disconnected.", "success");
   };
 
   const switchNetwork = async () => {
@@ -530,16 +546,6 @@ function App() {
     return { type: 3, category: "bmi_obesity", label: `Obesity-range BMI ${value.toFixed(1)}` };
   }, [bmi.height, bmi.weight, bp.diastolic, bp.systolic, classifierKind, sugar.mode, sugar.value]);
 
-  const recordClassifier = () =>
-    guardedWrite("classifier", async () => {
-      if (!lastClassifier) throw new Error("Run a classifier first.");
-      await sendConstualTransaction(account!, writeContractAsync, "recordClassifierUse", [
-        lastClassifier.type,
-        categoryHash(lastClassifier.category),
-        profile.preferredLanguage,
-      ]);
-    });
-
   const generateAgent = (scenario: AgentScenario) => {
     setSelectedScenario(scenario);
     setAgentReady(false);
@@ -584,9 +590,6 @@ function App() {
     bmi,
     setBmi,
     classifierResult,
-    lastClassifier,
-    setLastClassifier,
-    recordClassifier,
     selectedScenario,
     selectedAgentScenario: selectedScenario,
     agentLanguage,
@@ -609,6 +612,7 @@ function App() {
         connectWallet={connectWallet}
         wrongNetwork={wrongNetwork}
         switchNetwork={switchNetwork}
+        disconnectWallet={disconnectWallet}
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
         profile={profile}
@@ -650,9 +654,6 @@ type RenderProps = {
   bmi: { height: string; weight: string };
   setBmi: (value: { height: string; weight: string }) => void;
   classifierResult: { type: number; category: string; label: string } | null;
-  lastClassifier: { type: number; category: string; label: string } | null;
-  setLastClassifier: (value: { type: number; category: string; label: string } | null) => void;
-  recordClassifier: () => void;
   selectedScenario: AgentScenario;
   selectedAgentScenario: AgentScenario;
   agentLanguage: number;
@@ -700,11 +701,10 @@ function LandingPage({ navigate }: { navigate: (path: string) => void }) {
             Constual on Ritual Testnet
           </motion.p>
           <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-            A caring health companion for your learning journey.
+            Your caring health companion.
           </motion.h1>
           <motion.p className="hero-subtitle" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
-            Learn common health topics, use education-focused classifiers, ask a simulated bilingual agent, and build
-            privacy-safe proof of learning.
+            Learn health topics, try education-focused classifiers, ask a bilingual agent, and build proof of learning.
           </motion.p>
           <motion.div className="hero-actions" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
             <button className="btn btn-lime btn-xl" onClick={() => navigate("/app")} type="button">
@@ -719,42 +719,25 @@ function LandingPage({ navigate }: { navigate: (path: string) => void }) {
         <HeroBuddyGroup />
       </section>
 
-      <LandingSection id="how" title="How Constual Works" copy="A calm learning flow for health education and onchain proof-of-learning.">
+      <LandingSection id="features" title="Feature preview" copy="A visual learning passport, calm classifiers, bilingual guidance, badges, and Ritual proof.">
+        <FeatureGrid navigate={navigate} />
+      </LandingSection>
+
+      <LandingSection id="how" title="How Constual Works" copy="One gentle loop from learning to proof.">
         <div className="steps-grid">
           {["Learn", "Check", "Ask Agent", "Quiz", "Earn Proof"].map((step, index) => (
-            <div className="step-card" key={step}>
+            <motion.div className="step-card" key={step} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-80px" }} transition={{ delay: index * 0.06 }}>
               <span>{index + 1}</span>
               <strong>{step}</strong>
-            </div>
+            </motion.div>
           ))}
         </div>
       </LandingSection>
 
-      <LandingSection id="features" title="Feature Highlights" copy="Everything in Constual is education-first, frontend-only, and designed to avoid storing medical records.">
-        <FeatureGrid navigate={navigate} />
-      </LandingSection>
-
-      <LandingSection title="Why Ritual Testnet" copy="Built on Ritual Testnet for privacy-safe learning proofs and future AI-native health education experiences.">
-        <div className="ritual-panel">
-          <div>
-            <p>Network</p>
-            <strong>Ritual Testnet</strong>
-          </div>
-          <div>
-            <p>Chain ID</p>
-            <strong>1979</strong>
-          </div>
-          <div>
-            <p>Proof model</p>
-            <strong>Learning only</strong>
-          </div>
-        </div>
-      </LandingSection>
-
-      <LandingSection id="safety" title="Safety by Design" copy={safetyCopy}>
+      <LandingSection id="safety" title="Safety by Design" copy="Education stays separate from diagnosis, treatment, and medical records.">
         <div className="safety-band">
           <ShieldCheck />
-          <p>Constual does not store diagnosis, treatment decisions, personal diet plans, emergency advice, or medical records.</p>
+          <p>{safetyCopy}</p>
         </div>
       </LandingSection>
 
@@ -976,6 +959,7 @@ function QuizPage({
 
 function ClassifierPage({
   profile,
+  navigate,
   classifierKind,
   setClassifierKind,
   bp,
@@ -985,69 +969,98 @@ function ClassifierPage({
   bmi,
   setBmi,
   classifierResult,
-  setLastClassifier,
-  lastClassifier,
-  recordClassifier,
-  busy,
 }: RenderProps) {
   const [language, setLanguage] = useState(profile.preferredLanguage || 0);
   const copy = getClassifierCopy(language);
-  const resultLabel = classifierResult ? getClassifierResultLabel(classifierResult.category, classifierResult.label, language) : copy.empty;
+  const education = classifierResult ? getClassifierEducation(classifierKind, classifierResult, { bp, sugar, bmi }, language) : null;
 
   return (
     <AppPage title="Constual Classifier" kicker={copy.kicker}>
-      <div className="card classifier-card">
-        <div className="language-toggle">
-          <Languages size={18} />
-          <button className={language === 0 ? "active" : ""} onClick={() => setLanguage(0)} type="button">Indonesia</button>
-          <button className={language === 1 ? "active" : ""} onClick={() => setLanguage(1)} type="button">English</button>
-        </div>
-        <div className="segmented">
-          <button className={classifierKind === "bp" ? "active" : ""} onClick={() => setClassifierKind("bp")} type="button">{copy.bp}</button>
-          <button className={classifierKind === "sugar" ? "active" : ""} onClick={() => setClassifierKind("sugar")} type="button">{copy.sugar}</button>
-          <button className={classifierKind === "bmi" ? "active" : ""} onClick={() => setClassifierKind("bmi")} type="button">BMI</button>
+      <section className="classifier-layout">
+        <div className="card classifier-card">
+          <div className="classifier-topline">
+            <div className="language-toggle">
+              <Languages size={18} />
+              <button className={language === 0 ? "active" : ""} onClick={() => setLanguage(0)} type="button">Indonesia</button>
+              <button className={language === 1 ? "active" : ""} onClick={() => setLanguage(1)} type="button">English</button>
+            </div>
+            <span>{copy.frontendOnly}</span>
+          </div>
+          <div className="segmented">
+            <button className={classifierKind === "bp" ? "active" : ""} onClick={() => setClassifierKind("bp")} type="button">{copy.bp}</button>
+            <button className={classifierKind === "sugar" ? "active" : ""} onClick={() => setClassifierKind("sugar")} type="button">{copy.sugar}</button>
+            <button className={classifierKind === "bmi" ? "active" : ""} onClick={() => setClassifierKind("bmi")} type="button">BMI</button>
+          </div>
+
+          {classifierKind === "bp" && (
+            <div className="form-grid">
+              <Field label={copy.systolic} value={bp.systolic} onChange={(value) => setBp({ ...bp, systolic: value })} type="number" />
+              <Field label={copy.diastolic} value={bp.diastolic} onChange={(value) => setBp({ ...bp, diastolic: value })} type="number" />
+            </div>
+          )}
+          {classifierKind === "sugar" && (
+            <div className="form-grid">
+              <Field label={copy.sugarValue} value={sugar.value} onChange={(value) => setSugar({ ...sugar, value })} type="number" />
+              <label className="field">
+                <span>{copy.readingType}</span>
+                <select value={sugar.mode} onChange={(event) => setSugar({ ...sugar, mode: event.target.value })}>
+                  <option value="fasting">{copy.fasting}</option>
+                  <option value="random">{copy.random}</option>
+                </select>
+              </label>
+            </div>
+          )}
+          {classifierKind === "bmi" && (
+            <div className="form-grid">
+              <Field label={copy.height} value={bmi.height} onChange={(value) => setBmi({ ...bmi, height: value })} type="number" />
+              <Field label={copy.weight} value={bmi.weight} onChange={(value) => setBmi({ ...bmi, weight: value })} type="number" />
+            </div>
+          )}
+
+          <p className="classifier-note">{copy.disclaimer}</p>
         </div>
 
-        {classifierKind === "bp" && (
-          <div className="form-grid">
-            <Field label={copy.systolic} value={bp.systolic} onChange={(value) => setBp({ ...bp, systolic: value })} type="number" />
-            <Field label={copy.diastolic} value={bp.diastolic} onChange={(value) => setBp({ ...bp, diastolic: value })} type="number" />
-          </div>
-        )}
-        {classifierKind === "sugar" && (
-          <div className="form-grid">
-            <Field label={copy.sugarValue} value={sugar.value} onChange={(value) => setSugar({ ...sugar, value })} type="number" />
-            <label className="field">
-              <span>{copy.readingType}</span>
-              <select value={sugar.mode} onChange={(event) => setSugar({ ...sugar, mode: event.target.value })}>
-                <option value="fasting">{copy.fasting}</option>
-                <option value="random">{copy.random}</option>
-              </select>
-            </label>
-          </div>
-        )}
-        {classifierKind === "bmi" && (
-          <div className="form-grid">
-            <Field label={copy.height} value={bmi.height} onChange={(value) => setBmi({ ...bmi, height: value })} type="number" />
-            <Field label={copy.weight} value={bmi.weight} onChange={(value) => setBmi({ ...bmi, weight: value })} type="number" />
-          </div>
-        )}
-
-        <div className="result-panel">
-          <WellnessCharacter tone="blue" small />
-          <div>
-            <h3>{resultLabel}</h3>
-            <p>{copy.disclaimer}</p>
-          </div>
-        </div>
-        <div className="action-row">
-          <button className="btn btn-dark" disabled={!classifierResult} onClick={() => setLastClassifier(classifierResult)} type="button">{copy.prepare}</button>
-          <button className="btn btn-secondary" disabled={!lastClassifier || busy === "classifier"} onClick={recordClassifier} type="button">
-            {busy === "classifier" ? <Loader2 className="spin" size={18} /> : <ShieldCheck size={18} />}
-            {copy.record}
-          </button>
-        </div>
-      </div>
+        <motion.div className={`card classifier-result-card ${education?.tone ?? "neutral"}`} key={`${classifierKind}-${classifierResult?.category ?? "empty"}-${language}`} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+          {education ? (
+            <>
+              <div className="result-hero">
+                <ClassifierVisual kind={classifierKind} tone={education.tone} />
+                <div>
+                  <p className="eyebrow">{education.valueSummary}</p>
+                  <h2>{education.category}</h2>
+                  <p>{education.explanation}</p>
+                </div>
+              </div>
+              <div className="education-grid">
+                <EducationTile title={copy.meaning} copy={education.meaning} icon={BookOpen} />
+                <EducationTile title={copy.food} copy={education.food} icon={Leaf} />
+                <EducationTile title={copy.lifestyle} copy={education.lifestyle} icon={Heart} />
+                <EducationTile title={copy.activity} copy={education.activity} icon={Activity} />
+              </div>
+              <div className="recommended-module">
+                <div>
+                  <strong>{copy.recommended}</strong>
+                  <span>{education.moduleLabel}</span>
+                </div>
+                <button className="btn btn-lime" onClick={() => navigate(education.modulePath)} type="button">
+                  {copy.openModule}
+                  <ChevronRight size={17} />
+                </button>
+              </div>
+              <div className="safety-mini">
+                <ShieldCheck size={20} />
+                <p>{education.safety}</p>
+              </div>
+            </>
+          ) : (
+            <div className="result-empty">
+              <ClassifierVisual kind={classifierKind} tone="neutral" />
+              <h2>{copy.empty}</h2>
+              <p>{copy.disclaimer}</p>
+            </div>
+          )}
+        </motion.div>
+      </section>
     </AppPage>
   );
 }
@@ -1241,64 +1254,118 @@ function LeaderboardPage({ leaderboard, leaderboardError, loadLeaderboard }: Ren
 }
 
 function AboutPage({ navigate }: { navigate: (path: string) => void }) {
+  const futureItems = [
+    "More disease modules",
+    "More visual learning experiences",
+    "Better simulated agent guidance",
+    "Ritual-native AI inference exploration",
+    "Community health education campaigns",
+  ];
+
   return (
     <AppPage title="About Constual" kicker="Caring, modern, trusted, calm">
-      <section className="about-grid extended">
-        <AboutCard
-          title="What is Constual?"
-          copy="Constual is a bilingual health education dApp on Ritual Testnet. It helps users learn common health topics, use education-focused classifiers, ask a simulated bilingual health guidance agent, complete quizzes, and build privacy-safe proof-of-learning."
-          icon={Leaf}
-        />
-        <AboutCard
-          title="Why Constual?"
-          copy="Many people need simple, friendly, bilingual health literacy tools before they can ask better questions and understand common disease topics. Constual turns learning into a calm, trackable experience."
-          icon={Heart}
-        />
-        <AboutCard
-          title="Built on Ritual Testnet"
-          copy="Constual uses Ritual Testnet for learning passports, badges, leaderboard, classifier proof hashes, and agent guide proof hashes while keeping medical information out of the chain."
-          icon={ShieldCheck}
-        />
-        <div className="card about-copy">
-          <h2>What Constual is NOT</h2>
-          <div className="not-grid">
-            {["Not diagnosis", "Not doctor consultation", "Not a medical record app", "Not a personal diet plan", "Not emergency medical advice"].map((item) => (
-              <span key={item}>{item}</span>
+      <section className="about-story">
+        <motion.div className="card about-hero-card" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}>
+          <div>
+            <p className="eyebrow">About Constual</p>
+            <h2>A bilingual health education dApp on Ritual Testnet.</h2>
+            <p>
+              Constual makes common health learning simple, visual, and privacy-safe through modules, classifiers,
+              simulated guidance, quizzes, badges, and proof-of-learning.
+            </p>
+            <button className="btn btn-lime" onClick={() => navigate("/app")} type="button">
+              Enter Constual
+              <ChevronRight size={17} />
+            </button>
+          </div>
+          <div className="about-orbit">
+            <HeroBuddyGroup compact />
+            <FloatingHealthCard label="Passport" />
+            <FloatingHealthCard label="Learning Badge" className="about-float-two" />
+            <FloatingHealthCard label="Ritual Proof" className="about-float-three" />
+          </div>
+        </motion.div>
+
+        <div className="about-grid extended">
+          <AboutCard
+            title="What is Constual?"
+            copy="Constual helps users learn common health topics, use education-focused classifiers, ask a simulated bilingual health guidance agent, complete quizzes, and build privacy-safe proof-of-learning."
+            icon={Leaf}
+          />
+          <AboutCard
+            title="Why Constual?"
+            copy="Many people misunderstand blood pressure, blood sugar, BMI, common cold, dengue, and lifestyle basics. Constual turns these topics into simple bilingual visual learning."
+            icon={Heart}
+          />
+          <AboutCard
+            title="Built on Ritual Testnet"
+            copy="Constual uses Ritual Testnet for passport, badges, leaderboard, and learning proof as a real-world health literacy experiment."
+            icon={ShieldCheck}
+          />
+          <div className="card about-copy">
+            <Sparkles size={28} />
+            <h2>Feature system</h2>
+            <div className="not-grid">
+              {["Constual Passport", "Disease Library", "Classifier", "Agent", "Quiz and Badge", "Leaderboard", "Proof of Learning"].map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <section className="card future-card visual-future">
+          <div>
+            <p className="eyebrow">Future Direction</p>
+            <h2>More visual, more useful, still privacy-safe.</h2>
+            <p>V1 has no LLM precompile, no backend, and no AI API. The next direction is richer health literacy, not medical records.</p>
+          </div>
+          <div className="future-timeline">
+            {futureItems.map((item, index) => (
+              <motion.div key={item} initial={{ opacity: 0, x: 18 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.05 }}>
+                <span>{index + 1}</span>
+                <strong>{item}</strong>
+              </motion.div>
             ))}
           </div>
-        </div>
-        <div className="card about-copy">
-          <h2>Features</h2>
-          <div className="not-grid">
-            {["Constual Passport", "Disease Library", "Constual Classifier", "Constual Agent", "Quiz and Badge", "Leaderboard", "Proof of Learning"].map((item) => (
-              <span key={item}>{item}</span>
-            ))}
+        </section>
+
+        <div className="about-grid extended">
+          <div className="card about-copy">
+            <ShieldCheck size={28} />
+            <h2>Privacy-safe design</h2>
+            <p>
+              Constual does not store raw blood pressure, blood sugar, height, weight, symptoms, diagnosis, medication,
+              or medical history onchain. It stores learning proof, XP, badges, and progress only.
+            </p>
           </div>
-        </div>
-        <div className="card about-copy">
-          <h2>Privacy-safe design</h2>
-          <p>
-            Constual does not store raw blood pressure, blood sugar, height, weight, symptoms, diagnosis, medication, or
-            medical history onchain. It only stores learning proof, category hash, agent guide hash, XP, badges, and
-            progress.
-          </p>
-        </div>
-        <div className="card about-copy creator-card">
-          <h2>Created by Nxrskyaa</h2>
-          <p>
-            Indonesia-based Web3 content creator and builder exploring real-world blockchain applications for health
-            literacy, education, and AI-assisted learning.
-          </p>
-          <div className="action-row">
-            <a className="btn btn-secondary" href="https://github.com/nxrskyaa" rel="noreferrer" target="_blank">GitHub</a>
-            <a className="btn btn-secondary" href="https://x.com/nxrskyaa" rel="noreferrer" target="_blank">X</a>
+          <div className="card about-copy">
+            <X size={28} />
+            <h2>What Constual is NOT</h2>
+            <div className="not-grid">
+              {["Not diagnosis", "Not doctor consultation", "Not a medical record app", "Not a personal diet plan", "Not emergency advice"].map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="card future-card">
-          <HeroBuddyGroup compact />
-          <h3>Future direction</h3>
-          <p>Richer learning modules, more diseases, better simulated guidance, possible Ritual-native AI inference later, and community health education campaigns. V1 adds no LLM precompile, no backend, and no AI API.</p>
-          <button className="btn btn-lime" onClick={() => navigate("/app")} type="button">Enter Constual</button>
+          <div className="card about-copy creator-card">
+            <UserRound size={28} />
+            <h2>Creator & Builder</h2>
+            <h3>Nxrskyaa</h3>
+            <p>
+              Indonesia-based Web3 content creator and builder exploring real-world blockchain applications for health
+              literacy, education, and AI-assisted learning.
+            </p>
+            <div className="action-row">
+              <a className="btn btn-secondary" href="https://github.com/nxrskyaa" rel="noreferrer" target="_blank">GitHub</a>
+              <a className="btn btn-secondary" href="https://x.com/nxrskyaa" rel="noreferrer" target="_blank">X</a>
+            </div>
+          </div>
+          <div className="card about-copy safety-card">
+            <Heart size={28} />
+            <h2>Safety</h2>
+            <p>{safetyCopy}</p>
+            <button className="btn btn-dark" onClick={() => navigate("/library")} type="button">Start Learning</button>
+          </div>
         </div>
       </section>
     </AppPage>
@@ -1322,6 +1389,7 @@ function Navbar({
   connectWallet,
   wrongNetwork,
   switchNetwork,
+  disconnectWallet,
   mobileMenuOpen,
   setMobileMenuOpen,
   profile,
@@ -1332,17 +1400,17 @@ function Navbar({
   connectWallet: () => void;
   wrongNetwork: boolean;
   switchNetwork: () => void;
+  disconnectWallet: () => void;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
   profile: Profile;
 }) {
+  const [walletOpen, setWalletOpen] = useState(false);
   const landing = route.name === "landing";
   const links = landing
     ? [
         { label: "Features", path: "#features" },
         { label: "Safety", path: "#safety" },
-        { label: "About", path: "/about" },
-        { label: "Enter Constual", path: "/app" },
       ]
     : appLinks;
 
@@ -1353,6 +1421,24 @@ function Navbar({
       return;
     }
     navigate(path);
+  };
+
+  const copyAddress = async () => {
+    if (!account) return;
+    await navigator.clipboard?.writeText(account);
+    setWalletOpen(false);
+  };
+
+  const openExplorer = () => {
+    if (!account) return;
+    window.open(`https://explorer.ritualfoundation.org/address/${account}`, "_blank", "noopener,noreferrer");
+    setWalletOpen(false);
+  };
+
+  const handleDisconnect = () => {
+    disconnectWallet();
+    setWalletOpen(false);
+    setMobileMenuOpen(false);
   };
 
   return (
@@ -1377,16 +1463,38 @@ function Navbar({
 
         <div className="nav-actions">
           {!landing && wrongNetwork && (
-            <button className="btn btn-warning" onClick={switchNetwork} type="button">
+            <button className="btn btn-warning wallet-switch" onClick={switchNetwork} type="button">
               <Network size={16} />
-              Switch
+              Switch to Ritual
             </button>
           )}
           {!landing && (
-            <button className="btn btn-secondary wallet-btn" onClick={connectWallet} type="button">
-              <Wallet size={17} />
-              {account ? shortAddress(account) : "Connect wallet"}
-            </button>
+            <div className="wallet-shell">
+              {!account ? (
+                <button className="wallet-connect" onClick={connectWallet} type="button">
+                  <Wallet size={17} />
+                  Connect Wallet
+                </button>
+              ) : (
+                <button className="wallet-pill" onClick={() => setWalletOpen((open) => !open)} type="button" aria-expanded={walletOpen}>
+                  <span className="wallet-dot" />
+                  <span className="wallet-main">{shortAddress(account)}</span>
+                  <span className="wallet-network">Ritual</span>
+                  <ChevronDown size={16} />
+                </button>
+              )}
+              {account && walletOpen && (
+                <motion.div className="wallet-menu" initial={{ opacity: 0, y: -8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}>
+                  <div className="wallet-menu-head">
+                    <span>Connected wallet</span>
+                    <strong>{shortAddress(account)}</strong>
+                  </div>
+                  <button onClick={copyAddress} type="button"><Copy size={16} /> Copy address</button>
+                  <button onClick={openExplorer} type="button"><ExternalLink size={16} /> View on Explorer</button>
+                  <button className="danger" onClick={handleDisconnect} type="button"><X size={16} /> Disconnect</button>
+                </motion.div>
+              )}
+            </div>
           )}
           {landing && (
             <button className="btn btn-lime desktop-cta" onClick={() => navigate("/app")} type="button">Enter Constual</button>
@@ -1403,7 +1511,16 @@ function Navbar({
             <button key={link.label} onClick={() => handleLink(link.path)} type="button">{link.label}</button>
           ))}
           {!landing && (
-            <button onClick={connectWallet} type="button">{account ? `${profile.constualUsername || shortAddress(account)}` : "Connect wallet"}</button>
+            <>
+              {!account ? (
+                <button onClick={connectWallet} type="button">Connect Wallet</button>
+              ) : (
+                <>
+                  <button onClick={copyAddress} type="button">{profile.constualUsername || shortAddress(account)}</button>
+                  <button onClick={handleDisconnect} type="button">Disconnect</button>
+                </>
+              )}
+            </>
           )}
         </motion.div>
       )}
@@ -1442,27 +1559,27 @@ function AppPage({ title, kicker, action, children }: { title: string; kicker: s
 
 function LandingSection({ id, title, copy, children }: { id?: string; title: string; copy: string; children: ReactNode }) {
   return (
-    <section className="landing-section" id={id}>
+    <motion.section className="landing-section" id={id} initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-90px" }} transition={{ duration: 0.55 }}>
       <div className="section-heading">
         <p className="eyebrow">Constual</p>
         <h2>{title}</h2>
         <p>{copy}</p>
       </div>
       {children}
-    </section>
+    </motion.section>
   );
 }
 
 function FeatureGrid({ navigate }: { navigate: (path: string) => void }) {
   return (
     <div className="feature-grid">
-      {featureCards.map((feature) => (
-        <button className="card feature-card" key={feature.title} onClick={() => navigate(feature.path)} type="button">
+      {featureCards.map((feature, index) => (
+        <motion.button className="card feature-card" key={feature.title} onClick={() => navigate(feature.path)} type="button" initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} whileHover={{ y: -5 }} whileTap={{ scale: 0.985 }} viewport={{ once: true, margin: "-80px" }} transition={{ delay: index * 0.045 }}>
           <WellnessCharacter tone={feature.buddy as CharacterTone} small />
           <feature.icon size={23} />
           <h3>{feature.title}</h3>
           <p>{feature.copy}</p>
-        </button>
+        </motion.button>
       ))}
     </div>
   );
@@ -1743,6 +1860,252 @@ function getQuizQuestions(diseaseId: number, language: number): QuizCard[] {
   ];
 }
 
+type ClassifierEducation = {
+  tone: "normal" | "watch" | "alert" | "neutral";
+  category: string;
+  valueSummary: string;
+  explanation: string;
+  meaning: string;
+  food: string;
+  lifestyle: string;
+  activity: string;
+  safety: string;
+  moduleLabel: string;
+  modulePath: string;
+};
+
+function getClassifierEducation(
+  kind: ClassifierKind,
+  result: { category: string; label: string },
+  values: { bp: { systolic: string; diastolic: string }; sugar: { value: string; mode: string }; bmi: { height: string; weight: string } },
+  language: number,
+): ClassifierEducation {
+  const id = language === 0;
+  const bpSummary = id ? `${values.bp.systolic}/${values.bp.diastolic} mmHg` : `${values.bp.systolic}/${values.bp.diastolic} mmHg`;
+  const sugarSummary = `${values.sugar.value} mg/dL ${id ? values.sugar.mode === "fasting" ? "puasa" : "sewaktu" : values.sugar.mode}`;
+  const heightM = Number(values.bmi.height) / 100;
+  const bmiValue = heightM ? Number(values.bmi.weight) / (heightM * heightM) : 0;
+  const bmiSummary = `BMI ${bmiValue.toFixed(1)} (${values.bmi.height} cm, ${values.bmi.weight} kg)`;
+
+  const shared = {
+    bpModule: id ? "Modul Hipertensi" : "Hypertension module",
+    sugarModule: id ? "Modul Diabetes Tipe 2" : "Type 2 Diabetes module",
+    libraryModule: id ? "Disease Library" : "Disease Library",
+  };
+
+  const entries: Record<string, ClassifierEducation> = {
+    bp_normal: {
+      tone: "normal",
+      category: id ? "Rentang tekanan darah normal" : "Normal blood pressure range",
+      valueSummary: bpSummary,
+      explanation: id ? "Hasil ini berada dalam rentang yang umum dianggap normal untuk banyak orang dewasa." : "This result is within the usual adult range for many people.",
+      meaning: id ? "Satu hasil normal cukup baik, tetapi pola pengukuran berkala memberi gambaran yang lebih aman." : "One normal reading is reassuring, while routine measurement gives safer context.",
+      food: id ? "Pertahankan piring seimbang, buah, sayur, dan tidak berlebihan garam." : "Keep balanced meals, fruit, vegetables, and avoid excessive salt.",
+      lifestyle: id ? "Tidur cukup, kelola stres, hindari rokok, dan pantau tensi secara wajar." : "Support sleep, stress care, tobacco avoidance, and reasonable monitoring.",
+      activity: id ? "Jalan kaki rutin dan gerak ringan harian membantu menjaga kebugaran jantung." : "Regular walking and daily light movement can support heart fitness.",
+      safety: id ? "Constual tidak memberi diagnosis. Diskusikan bila angka berubah atau ada keluhan." : "Constual does not diagnose. Discuss changes or symptoms with a professional.",
+      moduleLabel: shared.bpModule,
+      modulePath: "/disease/hypertension",
+    },
+    bp_elevated: {
+      tone: "watch",
+      category: id ? "Rentang tekanan darah meningkat" : "Elevated blood pressure range",
+      valueSummary: bpSummary,
+      explanation: id ? "Rentang ini menjadi sinyal awal untuk memperhatikan pola pengukuran, terutama bila berulang." : "This range is an early awareness signal, especially when repeated.",
+      meaning: id ? "Pengukuran berulang saat tenang lebih bermakna daripada satu angka tunggal." : "Repeated calm measurements matter more than one isolated number.",
+      food: id ? "Mulai sadar garam, baca label makanan olahan, dan pilih lebih banyak buah serta sayur." : "Build salt awareness, read processed food labels, and add more fruit and vegetables.",
+      lifestyle: id ? "Istirahat sebelum ukur, tidur cukup, catat pola, dan kelola stres." : "Rest before measuring, sleep well, track patterns, and manage stress.",
+      activity: id ? "Jalan kaki 10-20 menit secara bertahap bisa menjadi awal yang realistis." : "A gradual 10-20 minute walking habit is a realistic start.",
+      safety: id ? "Ini bukan diagnosis hipertensi. Bila sering tinggi, diskusikan dengan tenaga kesehatan." : "This is not a hypertension diagnosis. Repeated elevation should be discussed with a clinician.",
+      moduleLabel: shared.bpModule,
+      modulePath: "/disease/hypertension",
+    },
+    bp_high: {
+      tone: "alert",
+      category: id ? "Rentang tekanan darah tinggi" : "High blood pressure range",
+      valueSummary: bpSummary,
+      explanation: id ? "Rentang ini perlu dipahami sebagai sinyal edukasi yang memerlukan konfirmasi pengukuran berulang." : "This range is an education signal that needs repeated measurement and professional confirmation.",
+      meaning: id ? "Jangan mengubah obat sendiri. Catat angka dan bicarakan dengan tenaga kesehatan." : "Do not self-adjust medication. Track readings and discuss them with a qualified professional.",
+      food: id ? "Kurangi garam berlebih, perhatikan makanan kemasan, tambah buah/sayur, dan jaga porsi." : "Reduce excessive salt, check packaged foods, add fruit/vegetables, and keep portions balanced.",
+      lifestyle: id ? "Pantau pola, tidur cukup, kelola stres, dan pahami risiko rokok." : "Monitor patterns, support sleep, manage stress, and understand smoking risk.",
+      activity: id ? "Jalan kaki bertahap dan gerak ringan konsisten dapat mendukung kesehatan jantung." : "Gradual walking and consistent light movement can support heart health.",
+      safety: id ? "Cari bantuan segera bila ada nyeri dada, sesak, lemah, bingung, sakit kepala berat, atau gangguan penglihatan." : "Seek urgent help with chest pain, shortness of breath, weakness, confusion, severe headache, or vision changes.",
+      moduleLabel: shared.bpModule,
+      modulePath: "/disease/hypertension",
+    },
+    bp_very_high: {
+      tone: "alert",
+      category: id ? "Rentang sangat tinggi" : "Very high blood pressure range",
+      valueSummary: bpSummary,
+      explanation: id ? "Rentang sangat tinggi perlu ditanggapi dengan tenang tetapi serius, terutama jika disertai gejala." : "A very high range should be handled calmly but seriously, especially with symptoms.",
+      meaning: id ? "Edukasi saja tidak cukup bila ada tanda bahaya. Jangan panik, tetapi prioritaskan keselamatan." : "Education is not enough when red flags appear. Stay calm and prioritize safety.",
+      food: id ? "Perubahan makanan tidak cukup untuk situasi mendesak. Fokus pada keselamatan dulu." : "Food changes are not enough for an urgent situation. Focus on safety first.",
+      lifestyle: id ? "Duduk tenang, ulang ukur sesuai petunjuk alat, dan cari bantuan bila gejala muncul." : "Sit calmly, recheck according to device guidance, and seek help if symptoms appear.",
+      activity: id ? "Jangan memaksakan olahraga saat angka sangat tinggi atau ada gejala." : "Do not force exercise when readings are very high or symptoms are present.",
+      safety: id ? "Bantuan medis segera dianjurkan jika ada nyeri dada, sesak, kelemahan, bingung, sakit kepala berat, atau perubahan penglihatan." : "Immediate medical help is recommended with chest pain, breathlessness, weakness, confusion, severe headache, or vision changes.",
+      moduleLabel: shared.bpModule,
+      modulePath: "/disease/hypertension",
+    },
+    sugar_low: {
+      tone: "alert",
+      category: id ? "Rentang gula darah rendah" : "Low blood sugar range",
+      valueSummary: sugarSummary,
+      explanation: id ? "Rentang rendah dapat berkaitan dengan gemetar, berkeringat, lemas, atau bingung." : "A low range can be associated with shakiness, sweating, weakness, or confusion.",
+      meaning: id ? "Perhatikan gejala dan konteks, terutama bila menggunakan obat tertentu atau sering melewatkan makan." : "Notice symptoms and context, especially with certain medicines or skipped meals.",
+      food: id ? "Edukasi umum: makan teratur dan jangan sengaja melewatkan makan bila tubuh tidak nyaman." : "General education: keep regular meals and avoid skipping meals when your body feels unwell.",
+      lifestyle: id ? "Catat waktu kejadian, aktivitas, dan makanan terakhir untuk diskusi profesional." : "Track timing, activity, and last meal for a professional discussion.",
+      activity: id ? "Hindari aktivitas berat saat merasa lemas, gemetar, atau bingung." : "Avoid strenuous activity when weak, shaky, or confused.",
+      safety: id ? "Cari bantuan bila gejala berat, bingung, pingsan, atau tidak membaik." : "Seek help for severe symptoms, confusion, fainting, or if it does not improve.",
+      moduleLabel: shared.sugarModule,
+      modulePath: "/disease/type-2-diabetes",
+    },
+    sugar_normal: {
+      tone: "normal",
+      category: id ? "Rentang gula darah edukasi normal" : "Education-normal blood sugar range",
+      valueSummary: sugarSummary,
+      explanation: id ? "Hasil ini berada dalam rentang yang umum dianggap baik untuk konteks pemeriksaan ini." : "This result is in a range commonly considered favorable for this reading context.",
+      meaning: id ? "Tetap lihat riwayat skrining, gejala, dan faktor risiko untuk konteks lengkap." : "Screening history, symptoms, and risk factors still add useful context.",
+      food: id ? "Utamakan serat, karbohidrat seimbang, air putih, dan kurangi minuman manis." : "Prioritize fiber, balanced carbohydrates, water, and fewer sugary drinks.",
+      lifestyle: id ? "Tidur, gerak setelah makan, dan pemeriksaan berkala mendukung literasi metabolik." : "Sleep, movement after meals, and routine checkups support metabolic literacy.",
+      activity: id ? "Jalan santai setelah makan dapat menjadi kebiasaan sederhana yang mendukung metabolisme." : "A gentle walk after meals can be a simple metabolism-supportive habit.",
+      safety: id ? "Hasil normal bukan izin untuk konsumsi gula tanpa batas." : "A normal result is not a license for unlimited sugar intake.",
+      moduleLabel: shared.sugarModule,
+      modulePath: "/disease/type-2-diabetes",
+    },
+    sugar_fasting_elevated: {
+      tone: "watch",
+      category: id ? "Gula darah puasa meningkat" : "Elevated fasting blood sugar",
+      valueSummary: sugarSummary,
+      explanation: id ? "Rentang meningkat dapat membantu memahami literasi prediabetes, tetapi bukan diagnosis." : "An elevated fasting range can support prediabetes literacy, but it is not a diagnosis.",
+      meaning: id ? "Konfirmasi profesional dan tes yang sesuai lebih baik daripada menebak dari satu angka." : "Professional confirmation and proper testing are better than guessing from one number.",
+      food: id ? "Kurangi minuman manis, perhatikan karbohidrat olahan, porsi, dan tambah serat." : "Reduce sweet drinks, watch refined carbs and portions, and increase fiber.",
+      lifestyle: id ? "Tidur, stres, pola makan, dan berat badan adalah konteks edukasi yang perlu dipahami." : "Sleep, stress, eating patterns, and weight context are useful education areas.",
+      activity: id ? "Jalan kaki rutin, cardio ringan, dan latihan kekuatan pemula dapat mendukung kesehatan metabolik secara umum." : "Regular walking, light cardio, and beginner strength training can generally support metabolic health.",
+      safety: id ? "Diskusikan hasil berulang dengan tenaga kesehatan." : "Discuss repeated elevation with a qualified professional.",
+      moduleLabel: shared.sugarModule,
+      modulePath: "/disease/type-2-diabetes",
+    },
+    sugar_fasting_high: {
+      tone: "alert",
+      category: id ? "Gula darah puasa tinggi" : "High fasting blood sugar",
+      valueSummary: sugarSummary,
+      explanation: id ? "Rentang tinggi memerlukan konfirmasi melalui pemeriksaan yang sesuai, bukan diagnosis mandiri." : "A high range needs confirmation with appropriate testing, not self-diagnosis.",
+      meaning: id ? "Perhatikan gejala seperti sering buang air kecil, haus, lemas, muntah, atau bingung." : "Notice symptoms such as frequent urination, thirst, weakness, vomiting, or confusion.",
+      food: id ? "Kurangi minuman manis, karbohidrat olahan, dan jaga pola makan konsisten." : "Reduce sugary drinks and refined carbs, and keep meals consistent.",
+      lifestyle: id ? "Hidrasi, tidur, gerak, dan jadwal checkup membantu percakapan kesehatan yang lebih baik." : "Hydration, sleep, movement, and checkups help better health conversations.",
+      activity: id ? "Gerak bertahap seperti jalan kaki atau cardio ringan bisa membantu kebiasaan, jika tubuh terasa aman." : "Gradual movement such as walking or light cardio can support habits when your body feels safe.",
+      safety: id ? "Cari bantuan bila ada muntah, bingung, sangat lemas, atau gejala memburuk." : "Seek help for vomiting, confusion, severe weakness, or worsening symptoms.",
+      moduleLabel: shared.sugarModule,
+      modulePath: "/disease/type-2-diabetes",
+    },
+    sugar_random_high: {
+      tone: "alert",
+      category: id ? "Gula darah sewaktu tinggi" : "High random blood sugar",
+      valueSummary: sugarSummary,
+      explanation: id ? "Gula sewaktu tinggi perlu dipahami dengan konteks makan terakhir, gejala, dan tes konfirmasi." : "A high random reading needs context from recent meals, symptoms, and confirmatory tests.",
+      meaning: id ? "Jangan menyimpulkan diagnosis dari satu angka, tetapi jangan abaikan bila berulang atau bergejala." : "Do not conclude diagnosis from one number, but do not ignore repeated or symptomatic readings.",
+      food: id ? "Kurangi minuman manis, karbohidrat olahan, dan susun makan lebih konsisten." : "Reduce sweet drinks and refined carbs, and keep meals more consistent.",
+      lifestyle: id ? "Catat waktu makan, nilai, gejala, tidur, dan hidrasi untuk diskusi profesional." : "Track meal timing, readings, symptoms, sleep, and hydration for professional discussion.",
+      activity: id ? "Jalan santai setelah makan dapat menjadi edukasi kebiasaan, selama tidak ada gejala berat." : "Gentle post-meal walking can be a habit lesson when no severe symptoms are present.",
+      safety: id ? "Cari bantuan bila sering kencing, sangat haus, lemas berat, muntah, atau bingung." : "Seek help for frequent urination, intense thirst, severe weakness, vomiting, or confusion.",
+      moduleLabel: shared.sugarModule,
+      modulePath: "/disease/type-2-diabetes",
+    },
+    bmi_underweight: {
+      tone: "watch",
+      category: id ? "BMI kurang" : "Underweight BMI range",
+      valueSummary: bmiSummary,
+      explanation: id ? "BMI dapat menjadi alat skrining kasar, tetapi tidak membaca komposisi tubuh atau kondisi personal." : "BMI is a rough screening tool and does not read body composition or personal context.",
+      meaning: id ? "Rentang kurang dapat menjadi alasan untuk memahami asupan, energi, dan kesehatan umum." : "An underweight range can be a reason to understand intake, energy, and general health.",
+      food: id ? "Edukasi umum: makan seimbang, protein cukup, dan makanan padat nutrisi." : "General education: balanced meals, enough protein, and nutrient-dense foods.",
+      lifestyle: id ? "Tidur, rutinitas makan, dan checkup penting bila ada kekhawatiran." : "Sleep, meal routines, and checkups matter when there are concerns.",
+      activity: id ? "Gerak ramah kekuatan secara bertahap dapat mendukung massa otot, jika nyaman dan aman." : "Gradual strength-friendly movement can support muscle, when comfortable and safe.",
+      safety: id ? "Konsultasikan jika berat turun tanpa sebab, lemas, atau nafsu makan terganggu." : "Consult if weight drops unexpectedly, weakness appears, or appetite is affected.",
+      moduleLabel: shared.libraryModule,
+      modulePath: "/library",
+    },
+    bmi_normal: {
+      tone: "normal",
+      category: id ? "BMI normal" : "Normal BMI range",
+      valueSummary: bmiSummary,
+      explanation: id ? "Rentang ini umum dianggap normal, tetapi BMI tetap hanya salah satu indikator." : "This range is commonly considered normal, but BMI is still only one indicator.",
+      meaning: id ? "Kebiasaan harian tetap lebih penting daripada satu angka." : "Daily habits still matter more than one number.",
+      food: id ? "Pertahankan piring seimbang, hidrasi, protein, dan serat." : "Maintain balanced meals, hydration, protein, and fiber.",
+      lifestyle: id ? "Tidur, kelola stres, dan pemeriksaan rutin mendukung kesehatan jangka panjang." : "Sleep, stress care, and routine checkups support long-term health.",
+      activity: id ? "Gabungkan jalan kaki, cardio ringan, dan latihan kekuatan pemula sesuai kemampuan." : "Combine walking, light cardio, and beginner strength training as comfortable.",
+      safety: id ? "BMI normal tidak menggantikan pemeriksaan bila ada keluhan." : "Normal BMI does not replace assessment when symptoms exist.",
+      moduleLabel: shared.libraryModule,
+      modulePath: "/library",
+    },
+    bmi_overweight: {
+      tone: "watch",
+      category: id ? "BMI overweight" : "Overweight BMI range",
+      valueSummary: bmiSummary,
+      explanation: id ? "Rentang overweight adalah bahan edukasi, bukan penilaian diri. BMI punya keterbatasan." : "An overweight range is education context, not self-judgment. BMI has limitations.",
+      meaning: id ? "Fokus pada kebiasaan berkelanjutan, bukan diet ekstrem atau rasa malu." : "Focus on sustainable habits, not extreme dieting or shame.",
+      food: id ? "Pelajari porsi, protein, serat, kurangi minuman manis, makanan ultra-proses, dan susun piring seimbang." : "Learn portions, protein, fiber, fewer sugary drinks, less ultra-processed food, and balanced plates.",
+      lifestyle: id ? "Tidur dan stres memengaruhi konsistensi. Mulai dari perubahan kecil yang bisa diulang." : "Sleep and stress affect consistency. Start with small repeatable changes.",
+      activity: id ? "Cardio mendukung kesehatan jantung/metabolik, sementara strength training atau weightlifting pemula mendukung otot dan metabolisme jangka panjang." : "Cardio supports heart and metabolic health, while beginner strength training or weightlifting supports muscle and long-term metabolism.",
+      safety: id ? "Ini bukan rencana diet personal. Konsultasikan bila ada kondisi medis, nyeri, atau kekhawatiran." : "This is not a personal diet plan. Consult when there are medical conditions, pain, or concerns.",
+      moduleLabel: id ? "Diabetes Tipe 2 dan Hipertensi" : "Type 2 Diabetes and Hypertension",
+      modulePath: "/disease/type-2-diabetes",
+    },
+    bmi_obesity: {
+      tone: "alert",
+      category: id ? "BMI rentang obesitas" : "Obesity BMI range",
+      valueSummary: bmiSummary,
+      explanation: id ? "Rentang ini adalah konteks edukasi yang perlu dibaca dengan keterbatasan BMI dan kondisi personal." : "This range is education context that should be read with BMI limitations and personal context.",
+      meaning: id ? "Pendekatan paling aman biasanya bertahap, suportif, dan dibahas dengan profesional bila perlu." : "The safest approach is usually gradual, supportive, and discussed with a professional when needed.",
+      food: id ? "Fokus pada kebiasaan makan berkelanjutan: porsi, protein/serat, kurangi minuman manis dan ultra-proses, bukan diet ekstrem." : "Focus on sustainable eating: portions, protein/fiber, fewer sugary drinks and ultra-processed foods, not extreme dieting.",
+      lifestyle: id ? "Tidur, stres, checkup rutin, dan dukungan sosial dapat membantu konsistensi." : "Sleep, stress care, routine checkups, and social support can help consistency.",
+      activity: id ? "Mulai bertahap: jalan kaki, low-impact cardio, bersepeda/berenang bila nyaman, dan resistance training pemula dengan progres pelan." : "Start gradually: walking, low-impact cardio, cycling/swimming if comfortable, and beginner resistance training with slow progress.",
+      safety: id ? "Ini bukan diagnosis atau program personal. Konsultasikan untuk rencana yang sesuai kondisi tubuh dan riwayat kesehatan." : "This is not a diagnosis or personal program. Consult for a plan that fits your body and health history.",
+      moduleLabel: id ? "Diabetes Tipe 2 dan Hipertensi" : "Type 2 Diabetes and Hypertension",
+      modulePath: "/disease/type-2-diabetes",
+    },
+  };
+
+  return entries[result.category] ?? entries.bp_normal;
+}
+
+function EducationTile({ title, copy, icon: Icon }: { title: string; copy: string; icon: LucideIcon }) {
+  return (
+    <div className="education-tile">
+      <Icon size={20} />
+      <strong>{title}</strong>
+      <p>{copy}</p>
+    </div>
+  );
+}
+
+function ClassifierVisual({ kind, tone }: { kind: ClassifierKind; tone: ClassifierEducation["tone"] }) {
+  return (
+    <div className={`classifier-visual ${kind} ${tone}`}>
+      {kind === "bp" && (
+        <>
+          <Heart size={30} />
+          <div className="pulse-line"><span /></div>
+          <div className="gauge-ring" />
+        </>
+      )}
+      {kind === "sugar" && (
+        <>
+          <Droplets size={30} />
+          <div className="glucose-dots"><span /><span /><span /><span /></div>
+          <div className="meter-bar"><span /></div>
+        </>
+      )}
+      {kind === "bmi" && (
+        <>
+          <UserRound size={30} />
+          <div className="body-balance"><span /><span /><span /></div>
+          <div className="wellness-arc" />
+        </>
+      )}
+    </div>
+  );
+}
+
 function getClassifierCopy(language: number) {
   if (language === 0) {
     return {
@@ -1758,9 +2121,14 @@ function getClassifierCopy(language: number) {
       height: "Tinggi badan dalam cm",
       weight: "Berat badan dalam kg",
       empty: "Masukkan nilai untuk melihat kategori edukasi",
-      disclaimer: "Nilai mentah tetap di browser. Jika merekam proof, Constual hanya mengirim hash kategori ke Ritual Testnet.",
-      prepare: "Siapkan Proof Classifier",
-      record: "Rekam Proof Classifier",
+      disclaimer: "Classifier ini frontend-only untuk edukasi. Nilai mentah tetap di browser dan tidak dikirim onchain.",
+      frontendOnly: "Frontend-only",
+      meaning: "Makna",
+      food: "Panduan makanan",
+      lifestyle: "Kebiasaan",
+      activity: "Aktivitas fisik",
+      recommended: "Rekomendasi modul",
+      openModule: "Buka modul",
     };
   }
 
@@ -1777,9 +2145,14 @@ function getClassifierCopy(language: number) {
     height: "Height in cm",
     weight: "Weight in kg",
     empty: "Enter values to see education category",
-    disclaimer: "Raw values stay in your browser. Recording proof sends only a category hash to Ritual Testnet.",
-    prepare: "Prepare Classifier Proof",
-    record: "Record Classifier Proof",
+    disclaimer: "This classifier is frontend-only education. Raw values stay in your browser and are not sent onchain.",
+    frontendOnly: "Frontend-only",
+    meaning: "Meaning",
+    food: "Food guidance",
+    lifestyle: "Lifestyle",
+    activity: "Physical activity",
+    recommended: "Recommended module",
+    openModule: "Open module",
   };
 }
 
