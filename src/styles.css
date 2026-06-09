@@ -272,8 +272,8 @@ p {
 .page-header h1 {
   margin: 0;
   color: var(--color-charcoal);
-  font-size: clamp(3rem, 8vw, 6.7rem);
-  line-height: 0.92;
+  font-size: clamp(2.8rem, 6.4vw, 5.35rem);
+  line-height: 0.96;
   font-weight: 900;
 }
 
@@ -881,6 +881,51 @@ p {
   color: #78b84b;
 }
 
+.learning-topline,
+.module-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.module-meta {
+  justify-content: flex-start;
+  margin: 18px 0;
+}
+
+.module-meta span {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--color-lime-soft);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.progress-track {
+  height: 10px;
+  margin-bottom: 22px;
+  border-radius: 999px;
+  background: var(--color-soft);
+  overflow: hidden;
+}
+
+.progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-lime);
+  transition: width 220ms ease;
+}
+
+.learning-card-flow {
+  min-height: 210px;
+  padding: 22px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, var(--color-white), var(--color-lime-soft));
+}
+
 .lesson-points {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -920,6 +965,40 @@ p {
 .choice.active {
   border-color: rgba(127, 178, 78, 0.45);
   background: var(--color-lime-soft);
+}
+
+.quiz-question {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 24px;
+  background: var(--color-soft);
+}
+
+.quiz-explanation {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
+.score-card {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 24px;
+  background: var(--color-soft);
+}
+
+.score-card.ready {
+  background: var(--color-lime-soft);
+}
+
+.score-card strong,
+.score-card span {
+  display: block;
+}
+
+.score-card strong {
+  font-size: 1.5rem;
 }
 
 .classifier-card {
@@ -1184,8 +1263,68 @@ p {
   grid-template-columns: minmax(0, 1fr) 420px;
 }
 
+.about-grid.extended {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.about-grid.extended .future-card {
+  grid-column: span 2;
+}
+
 .future-card {
   overflow: hidden;
+}
+
+.about-copy {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.about-copy > svg {
+  color: #7fb24e;
+}
+
+.not-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.not-grid span {
+  padding: 10px 13px;
+  border-radius: 999px;
+  background: var(--color-soft);
+  color: var(--color-charcoal);
+  font-weight: 800;
+}
+
+.creator-card {
+  background: var(--color-lime-soft);
+}
+
+.disease-visual {
+  position: relative;
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(214, 254, 161, 0.7), transparent 9rem),
+    var(--color-soft);
+}
+
+.disease-icon-orbit {
+  position: absolute;
+  right: 22%;
+  top: 18%;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--color-white);
+  box-shadow: var(--shadow-card);
 }
 
 .read-error {
@@ -1347,7 +1486,7 @@ p {
   }
 
   .landing-hero h1 {
-    font-size: clamp(2.8rem, 15vw, 4.3rem);
+    font-size: clamp(2.45rem, 13vw, 3.6rem);
   }
 
   .hero-actions .btn {
@@ -1453,6 +1592,12 @@ p {
   .future-card {
     padding: 20px;
     border-radius: 26px;
+  }
+
+  .about-grid.extended,
+  .about-grid.extended .future-card {
+    grid-template-columns: 1fr;
+    grid-column: auto;
   }
 
   .segmented,

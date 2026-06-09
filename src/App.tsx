@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getAddress, type Address } from "viem";
+import { useAccount, useChainId, useConfig, useConnect, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
 import { agentScenarios, diseases, languageLabels, type AgentScenario, type Disease } from "./data";
 import {
   categoryHash,
@@ -135,8 +136,6 @@ const featureCards = [
 function App() {
   const [route, setRoute] = useState<RouteInfo>(() => parseRoute(window.location.pathname));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [account, setAccount] = useState<Address | null>(null);
-  const [chainId, setChainId] = useState<number | null>(null);
   const [profileCreated, setProfileCreated] = useState(false);
   const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [profileForm, setProfileForm] = useState<ProfileForm>(emptyForm);
@@ -147,7 +146,6 @@ function App() {
   const [canBadgeMap, setCanBadgeMap] = useState<Record<number, boolean>>({});
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [leaderboardError, setLeaderboardError] = useState("");
-  const [selectedQuiz, setSelectedQuiz] = useState(0);
   const [classifierKind, setClassifierKind] = useState<ClassifierKind>("bp");
   const [bp, setBp] = useState({ systolic: "", diastolic: "" });
   const [sugar, setSugar] = useState({ value: "", mode: "fasting" });
@@ -158,9 +156,32 @@ function App() {
   const [agentReady, setAgentReady] = useState(true);
   const [toast, setToast] = useState<Toast>(null);
   const [busy, setBusy] = useState("");
+  const [readNonce, setReadNonce] = useState(0);
 
+  const { address, isConnected } = useAccount();
+  const chainId = useChainId();
+  const config = useConfig();
+  const { connectors, connectAsync } = useConnect();
+  const { switchChainAsync } = useSwitchChain();
+  const { writeContractAsync } = useWriteContract();
+  const account = address ?? null;
+  const ritualConfigured = config.chains.some((chain) => chain.id === RITUAL_CHAIN_ID);
   const wrongNetwork = Boolean(account && chainId !== RITUAL_CHAIN_ID);
   const currentDisease = route.name === "disease" || route.name === "quiz" ? diseaseBySlug(route.slug) : diseases[0];
+  const profileCreatedRead = useReadContract({
+    address: CONSTUAL_CORE_ADDRESS,
+    abi: constualAbi,
+    functionName: "isProfileCreated",
+    args: account ? [account] : undefined,
+    chainId: RITUAL_CHAIN_ID,
+    query: { enabled: Boolean(account && chainId === RITUAL_CHAIN_ID) },
+  });
+
+  useEffect(() => {
+    if (typeof profileCreatedRead.data === "boolean") {
+      setProfileCreated(profileCreatedRead.data);
+    }
+  }, [profileCreatedRead.data]);
 
   const navigate = useCallback((path: string) => {
     window.history.pushState({}, "", path);
@@ -174,29 +195,33 @@ function App() {
     window.setTimeout(() => setToast(null), 4600);
   }, []);
 
-  const refreshWalletState = useCallback(async () => {
-    if (!window.ethereum) return;
-    const [accounts, chain] = await Promise.all([
-      window.ethereum.request({ method: "eth_accounts" }) as Promise<string[]>,
-      window.ethereum.request({ method: "eth_chainId" }) as Promise<string>,
-    ]);
-    setAccount(accounts[0] ? getAddress(accounts[0]) : null);
-    setChainId(Number.parseInt(chain, 16));
-  }, []);
-
   const connectWallet = async () => {
-    if (!window.ethereum) {
+    const connector = connectors[0];
+    if (!connector) {
       showToast("Install a browser wallet to connect.", "error");
       return;
     }
 
     try {
-      const accounts = (await window.ethereum.request({ method: "eth_requestAccounts" })) as string[];
-      setAccount(accounts[0] ? getAddress(accounts[0]) : null);
-      await refreshWalletState();
+      await connectAsync({ connector });
+      setReadNonce((value) => value + 1);
     } catch (error) {
       console.error(error);
       showToast("Wallet connection was cancelled.", "error");
+    }
+  };
+
+  const switchNetwork = async () => {
+    try {
+      if (!ritualConfigured) throw new Error("Ritual Testnet is missing from wagmi config.");
+      await switchChainAsync({ chainId: RITUAL_CHAIN_ID });
+      await profileCreatedRead.refetch();
+      setReadNonce((value) => value + 1);
+    } catch (error) {
+      console.error(error);
+      await switchToRitualTestnet();
+      await profileCreatedRead.refetch();
+      setReadNonce((value) => value + 1);
     }
   };
 
@@ -286,10 +311,10 @@ function App() {
       setCanBadgeMap(Object.fromEntries(progressEntries.map(([id, , , canClaim]) => [id, canClaim])));
     } catch (error) {
       console.error(error);
-      setProfileError("Constual Passport could not be read. Please retry after checking wallet, ABI, and Ritual RPC.");
+      setProfileError("Constual Passport could not be read. ABI mismatch or Ritual RPC issue suspected.");
       showToast("Passport read failed. Try the retry button.", "error");
     }
-  }, [account, showToast]);
+  }, [account, readNonce, showToast]);
 
   const loadLeaderboard = useCallback(async () => {
     setLeaderboardError("");
@@ -346,22 +371,14 @@ function App() {
   }, []);
 
   useEffect(() => {
-    refreshWalletState();
-    if (!window.ethereum) return;
-    const refresh = () => refreshWalletState();
-    window.ethereum.on?.("accountsChanged", refresh);
-    window.ethereum.on?.("chainChanged", refresh);
-    return () => {
-      window.ethereum?.removeListener?.("accountsChanged", refresh);
-      window.ethereum?.removeListener?.("chainChanged", refresh);
-    };
-  }, [refreshWalletState]);
-
-  useEffect(() => {
-    if (account) {
+    if (account && chainId === RITUAL_CHAIN_ID) {
       loadProfile();
+    } else if (!account) {
+      setProfileCreated(false);
+      setProfile(emptyProfile);
+      setProfileForm(emptyForm);
     }
-  }, [account, loadProfile]);
+  }, [account, chainId, loadProfile]);
 
   useEffect(() => {
     if (route.name === "leaderboard" || route.name === "app") {
@@ -389,6 +406,8 @@ function App() {
       showToast("Confirm the transaction in your wallet.", "info");
       await action();
       showToast("Transaction confirmed. Refreshing Constual reads.", "success");
+      await profileCreatedRead.refetch();
+      setReadNonce((value) => value + 1);
       await Promise.all([loadProfile(), loadLeaderboard()]);
     } catch (error) {
       console.error(error);
@@ -423,7 +442,7 @@ function App() {
           }
         }
 
-        await sendConstualTransaction(account!, profileCreated ? "updateProfile" : "createProfile", [
+        await sendConstualTransaction(account!, writeContractAsync, profileCreated ? "updateProfile" : "createProfile", [
           normalizedForm.displayName,
           normalizedForm.constualUsername,
           normalizedForm.xUsername,
@@ -435,15 +454,49 @@ function App() {
     );
   };
 
-  const completeQuest = (disease: Disease) =>
+  const completeQuest = (disease: Disease, scoreNumber: number, languageUsed: number) =>
     guardedWrite("quest", async () => {
-      const score = selectedQuiz === disease.quiz.answer ? 100n : 60n;
-      await sendConstualTransaction(account!, "completeQuest", [BigInt(disease.id), score, profile.preferredLanguage]);
+      if (!diseases.some((item) => item.id === disease.id) || disease.id === 0) {
+        throw new Error("Invalid diseaseId.");
+      }
+      const score = BigInt(scoreNumber);
+      if (score < 60n || score > 100n) {
+        throw new Error("Score must be between 60 and 100.");
+      }
+      const alreadyCompleted = (await publicClient.readContract({
+        address: CONSTUAL_CORE_ADDRESS,
+        abi: constualAbi,
+        functionName: "hasCompletedQuest",
+        args: [account!, BigInt(disease.id)],
+      })) as boolean;
+      if (alreadyCompleted) {
+        throw new Error("Quest already completed.");
+      }
+      await sendConstualTransaction(account!, writeContractAsync, "completeQuest", [BigInt(disease.id), score, languageUsed]);
     });
 
   const claimBadge = (diseaseId: number) =>
     guardedWrite("badge", async () => {
-      await sendConstualTransaction(account!, "claimBadge", [BigInt(diseaseId)]);
+      if (!diseases.some((item) => item.id === diseaseId) || diseaseId === 0) {
+        throw new Error("Invalid diseaseId.");
+      }
+      const [alreadyClaimed, canClaim] = await Promise.all([
+        publicClient.readContract({
+          address: CONSTUAL_CORE_ADDRESS,
+          abi: constualAbi,
+          functionName: "hasClaimedBadge",
+          args: [account!, BigInt(diseaseId)],
+        }) as Promise<boolean>,
+        publicClient.readContract({
+          address: CONSTUAL_CORE_ADDRESS,
+          abi: constualAbi,
+          functionName: "canClaimBadge",
+          args: [account!, BigInt(diseaseId)],
+        }) as Promise<boolean>,
+      ]);
+      if (alreadyClaimed) throw new Error("Badge already claimed.");
+      if (!canClaim) throw new Error("Badge is not claimable yet.");
+      await sendConstualTransaction(account!, writeContractAsync, "claimBadge", [BigInt(diseaseId)]);
     });
 
   const classifierResult = useMemo(() => {
@@ -480,7 +533,7 @@ function App() {
   const recordClassifier = () =>
     guardedWrite("classifier", async () => {
       if (!lastClassifier) throw new Error("Run a classifier first.");
-      await sendConstualTransaction(account!, "recordClassifierUse", [
+      await sendConstualTransaction(account!, writeContractAsync, "recordClassifierUse", [
         lastClassifier.type,
         categoryHash(lastClassifier.category),
         profile.preferredLanguage,
@@ -495,7 +548,7 @@ function App() {
 
   const recordAgentGuide = () =>
     guardedWrite("agent", async () => {
-      await sendConstualTransaction(account!, "recordAgentGuide", [
+      await sendConstualTransaction(account!, writeContractAsync, "recordAgentGuide", [
         BigInt(selectedScenario.id),
         agentLanguage,
         guideProofHash(selectedScenario.id, agentLanguage, account!),
@@ -520,8 +573,6 @@ function App() {
     completedMap,
     badgeMap,
     canBadgeMap,
-    selectedQuiz,
-    setSelectedQuiz,
     completeQuest,
     claimBadge,
     classifierKind,
@@ -557,11 +608,12 @@ function App() {
         account={account}
         connectWallet={connectWallet}
         wrongNetwork={wrongNetwork}
+        switchNetwork={switchNetwork}
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
         profile={profile}
       />
-      {route.name !== "landing" && wrongNetwork && <NetworkGate />}
+      {route.name !== "landing" && wrongNetwork && <NetworkGate switchNetwork={switchNetwork} />}
       {page}
       {route.name !== "landing" && <MobileBottomNav route={route} navigate={navigate} />}
       {toast && <div className={`toast ${toast.kind}`}>{toast.message}</div>}
@@ -587,9 +639,7 @@ type RenderProps = {
   completedMap: Record<number, boolean>;
   badgeMap: Record<number, boolean>;
   canBadgeMap: Record<number, boolean>;
-  selectedQuiz: number;
-  setSelectedQuiz: (index: number) => void;
-  completeQuest: (disease: Disease) => void;
+  completeQuest: (disease: Disease, score: number, languageUsed: number) => void;
   claimBadge: (diseaseId: number) => void;
   classifierKind: ClassifierKind;
   setClassifierKind: (kind: ClassifierKind) => void;
@@ -650,11 +700,11 @@ function LandingPage({ navigate }: { navigate: (path: string) => void }) {
             Constual on Ritual Testnet
           </motion.p>
           <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-            Your caring health companion for every step of your wellness journey.
+            A caring health companion for your learning journey.
           </motion.h1>
           <motion.p className="hero-subtitle" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
-            Constual helps you learn common health topics, check health education numbers, ask a simulated bilingual
-            agent, and build privacy-safe proof of learning on Ritual Testnet.
+            Learn common health topics, use education-focused classifiers, ask a simulated bilingual agent, and build
+            privacy-safe proof of learning.
           </motion.p>
           <motion.div className="hero-actions" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
             <button className="btn btn-lime btn-xl" onClick={() => navigate("/app")} type="button">
@@ -797,23 +847,54 @@ function DiseasePage({
   navigate: (path: string) => void;
   completed?: boolean;
 }) {
+  const [language, setLanguage] = useState(0);
+  const [step, setStep] = useState(0);
+  const sections = getLearningSections(disease.id, language);
+  const activeSection = sections[step] ?? sections[0];
+
   return (
     <AppPage title={disease.name} kicker={disease.localName} action={<button className="btn btn-lime" onClick={() => navigate(`/disease/${slugForDisease(disease)}/quiz`)} type="button">Take Quiz</button>}>
       <section className="learning-layout">
         <div className="card learning-main">
-          <disease.icon size={34} />
-          <h2>{disease.lesson}</h2>
-          <p>{disease.summary}</p>
+          <div className="learning-topline">
+            <disease.icon size={34} />
+            <div className="language-toggle">
+              <Languages size={18} />
+              <button className={language === 0 ? "active" : ""} onClick={() => setLanguage(0)} type="button">Indonesia</button>
+              <button className={language === 1 ? "active" : ""} onClick={() => setLanguage(1)} type="button">English</button>
+            </div>
+          </div>
+          <div className="module-meta">
+            <span>6 min</span>
+            <span>Beginner</span>
+            <span>Badge reward</span>
+          </div>
+          <div className="progress-track">
+            <span style={{ width: `${((step + 1) / sections.length) * 100}%` }} />
+          </div>
+          <motion.div className="learning-card-flow" key={`${language}-${step}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <p className="eyebrow">{activeSection.label}</p>
+            <h2>{activeSection.title}</h2>
+            <p>{activeSection.copy}</p>
+          </motion.div>
           <div className="lesson-points">
-            <InfoPill title="Meaning" copy="Learn the category and context before taking action." />
-            <InfoPill title="Care habit" copy="Track patterns, discuss concerns with qualified professionals, and avoid self-diagnosis." />
+            <InfoPill title={language === 0 ? "Makna" : "Meaning"} copy={language === 0 ? "Pahami konteks edukasi sebelum mengambil keputusan kesehatan." : "Understand the education context before making health decisions."} />
+            <InfoPill title={language === 0 ? "Kebiasaan" : "Care habit"} copy={language === 0 ? "Catat pola, amati gejala, dan diskusikan kekhawatiran dengan tenaga kesehatan." : "Track patterns, notice symptoms, and discuss concerns with qualified professionals."} />
             <InfoPill title="Safety" copy={safetyCopy} />
+          </div>
+          <div className="action-row">
+            <button className="btn btn-secondary" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))} type="button">Previous</button>
+            {step < sections.length - 1 ? (
+              <button className="btn btn-lime" onClick={() => setStep((value) => Math.min(sections.length - 1, value + 1))} type="button">Next</button>
+            ) : (
+              <button className="btn btn-lime" onClick={() => navigate(`/disease/${slugForDisease(disease)}/quiz`)} type="button">Start Quiz</button>
+            )}
           </div>
         </div>
         <aside className="card side-card">
-          <WellnessCharacter tone="lime" />
+          <DiseaseVisual diseaseId={disease.id} />
           <h3>{completed ? "Quest completed" : "Ready for quiz"}</h3>
-          <p>Complete the quiz to record learning progress, then claim a badge when the contract allows it.</p>
+          <p>{language === 0 ? "Baca kartu pembelajaran singkat, lalu lanjut ke kuis untuk bukti belajar." : "Read short learning cards, then continue to the quiz for proof-of-learning."}</p>
           <button className="btn btn-dark" onClick={() => navigate(`/disease/${slugForDisease(disease)}/quiz`)} type="button">Open Quiz</button>
         </aside>
       </section>
@@ -823,8 +904,6 @@ function DiseasePage({
 
 function QuizPage({
   disease,
-  selectedQuiz,
-  setSelectedQuiz,
   completeQuest,
   claimBadge,
   busy,
@@ -832,25 +911,53 @@ function QuizPage({
   badgeMap,
   canBadgeMap,
 }: RenderProps & { disease: Disease }) {
+  const [language, setLanguage] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const questions = getQuizQuestions(disease.id, language);
+  const answered = questions.every((_, index) => answers[index] !== undefined);
+  const correct = questions.reduce((total, question, index) => total + (answers[index] === question.answer ? 1 : 0), 0);
+  const score = answered ? Math.round((correct / questions.length) * 100) : 0;
+  const passed = score >= 60;
+
   return (
     <AppPage title={`${disease.name} Quiz`} kicker="Constual Learning Proof">
       <section className="card quiz-card">
         <div>
           <p className="eyebrow">{disease.localName}</p>
-          <h2>{disease.quiz.question}</h2>
+          <h2>{language === 0 ? "Jawab kuis singkat untuk bukti belajar." : "Answer a short quiz for learning proof."}</h2>
+        </div>
+        <div className="language-toggle">
+          <Languages size={18} />
+          <button className={language === 0 ? "active" : ""} onClick={() => setLanguage(0)} type="button">Indonesia</button>
+          <button className={language === 1 ? "active" : ""} onClick={() => setLanguage(1)} type="button">English</button>
         </div>
         <div className="choice-list">
-          {disease.quiz.options.map((option, index) => (
-            <label className={selectedQuiz === index ? "choice active" : "choice"} key={option}>
-              <input checked={selectedQuiz === index} name="quiz" onChange={() => setSelectedQuiz(index)} type="radio" />
-              <span>{option}</span>
-            </label>
+          {questions.map((question, questionIndex) => (
+            <div className="quiz-question" key={question.question}>
+              <strong>{questionIndex + 1}. {question.question}</strong>
+              {question.options.map((option, optionIndex) => (
+                <label className={answers[questionIndex] === optionIndex ? "choice active" : "choice"} key={option}>
+                  <input
+                    checked={answers[questionIndex] === optionIndex}
+                    name={`quiz-${questionIndex}`}
+                    onChange={() => setAnswers({ ...answers, [questionIndex]: optionIndex })}
+                    type="radio"
+                  />
+                  <span>{option}</span>
+                </label>
+              ))}
+              {answers[questionIndex] !== undefined && <p className="quiz-explanation">{question.explanation}</p>}
+            </div>
           ))}
         </div>
+        <div className={answered ? "score-card ready" : "score-card"}>
+          <strong>{answered ? `${score}/100` : "Answer all questions"}</strong>
+          <span>{answered ? (passed ? "Passing score reached" : "Score too low. Review the module first.") : "Passing score requires 60 or above."}</span>
+        </div>
         <div className="action-row">
-          <button className="btn btn-lime" onClick={() => completeQuest(disease)} disabled={busy === "quest"} type="button">
+          <button className="btn btn-lime" onClick={() => completeQuest(disease, score, language)} disabled={busy === "quest" || !answered || !passed || completedMap[disease.id]} type="button">
             {busy === "quest" ? <Loader2 className="spin" size={18} /> : <Check size={18} />}
-            Complete Quest
+            {completedMap[disease.id] ? "Quest Completed" : "Complete Quest"}
           </button>
           <button
             className="btn btn-secondary"
@@ -868,6 +975,7 @@ function QuizPage({
 }
 
 function ClassifierPage({
+  profile,
   classifierKind,
   setClassifierKind,
   bp,
@@ -882,52 +990,61 @@ function ClassifierPage({
   recordClassifier,
   busy,
 }: RenderProps) {
+  const [language, setLanguage] = useState(profile.preferredLanguage || 0);
+  const copy = getClassifierCopy(language);
+  const resultLabel = classifierResult ? getClassifierResultLabel(classifierResult.category, classifierResult.label, language) : copy.empty;
+
   return (
-    <AppPage title="Constual Classifier" kicker="Education-focused number checks">
+    <AppPage title="Constual Classifier" kicker={copy.kicker}>
       <div className="card classifier-card">
+        <div className="language-toggle">
+          <Languages size={18} />
+          <button className={language === 0 ? "active" : ""} onClick={() => setLanguage(0)} type="button">Indonesia</button>
+          <button className={language === 1 ? "active" : ""} onClick={() => setLanguage(1)} type="button">English</button>
+        </div>
         <div className="segmented">
-          <button className={classifierKind === "bp" ? "active" : ""} onClick={() => setClassifierKind("bp")} type="button">Cek Tensi</button>
-          <button className={classifierKind === "sugar" ? "active" : ""} onClick={() => setClassifierKind("sugar")} type="button">Gula Darah</button>
+          <button className={classifierKind === "bp" ? "active" : ""} onClick={() => setClassifierKind("bp")} type="button">{copy.bp}</button>
+          <button className={classifierKind === "sugar" ? "active" : ""} onClick={() => setClassifierKind("sugar")} type="button">{copy.sugar}</button>
           <button className={classifierKind === "bmi" ? "active" : ""} onClick={() => setClassifierKind("bmi")} type="button">BMI</button>
         </div>
 
         {classifierKind === "bp" && (
           <div className="form-grid">
-            <Field label="Systolic" value={bp.systolic} onChange={(value) => setBp({ ...bp, systolic: value })} type="number" />
-            <Field label="Diastolic" value={bp.diastolic} onChange={(value) => setBp({ ...bp, diastolic: value })} type="number" />
+            <Field label={copy.systolic} value={bp.systolic} onChange={(value) => setBp({ ...bp, systolic: value })} type="number" />
+            <Field label={copy.diastolic} value={bp.diastolic} onChange={(value) => setBp({ ...bp, diastolic: value })} type="number" />
           </div>
         )}
         {classifierKind === "sugar" && (
           <div className="form-grid">
-            <Field label="Blood sugar value" value={sugar.value} onChange={(value) => setSugar({ ...sugar, value })} type="number" />
+            <Field label={copy.sugarValue} value={sugar.value} onChange={(value) => setSugar({ ...sugar, value })} type="number" />
             <label className="field">
-              <span>Reading type</span>
+              <span>{copy.readingType}</span>
               <select value={sugar.mode} onChange={(event) => setSugar({ ...sugar, mode: event.target.value })}>
-                <option value="fasting">Fasting</option>
-                <option value="random">Random</option>
+                <option value="fasting">{copy.fasting}</option>
+                <option value="random">{copy.random}</option>
               </select>
             </label>
           </div>
         )}
         {classifierKind === "bmi" && (
           <div className="form-grid">
-            <Field label="Height in cm" value={bmi.height} onChange={(value) => setBmi({ ...bmi, height: value })} type="number" />
-            <Field label="Weight in kg" value={bmi.weight} onChange={(value) => setBmi({ ...bmi, weight: value })} type="number" />
+            <Field label={copy.height} value={bmi.height} onChange={(value) => setBmi({ ...bmi, height: value })} type="number" />
+            <Field label={copy.weight} value={bmi.weight} onChange={(value) => setBmi({ ...bmi, weight: value })} type="number" />
           </div>
         )}
 
         <div className="result-panel">
           <WellnessCharacter tone="blue" small />
           <div>
-            <h3>{classifierResult?.label ?? "Enter values to see education category"}</h3>
-            <p>Raw values stay in your browser. Recording proof sends only a category hash to Ritual Testnet.</p>
+            <h3>{resultLabel}</h3>
+            <p>{copy.disclaimer}</p>
           </div>
         </div>
         <div className="action-row">
-          <button className="btn btn-dark" disabled={!classifierResult} onClick={() => setLastClassifier(classifierResult)} type="button">Prepare Classifier Proof</button>
+          <button className="btn btn-dark" disabled={!classifierResult} onClick={() => setLastClassifier(classifierResult)} type="button">{copy.prepare}</button>
           <button className="btn btn-secondary" disabled={!lastClassifier || busy === "classifier"} onClick={recordClassifier} type="button">
             {busy === "classifier" ? <Loader2 className="spin" size={18} /> : <ShieldCheck size={18} />}
-            Record Classifier Proof
+            {copy.record}
           </button>
         </div>
       </div>
@@ -1126,30 +1243,75 @@ function LeaderboardPage({ leaderboard, leaderboardError, loadLeaderboard }: Ren
 function AboutPage({ navigate }: { navigate: (path: string) => void }) {
   return (
     <AppPage title="About Constual" kicker="Caring, modern, trusted, calm">
-      <section className="about-grid">
+      <section className="about-grid extended">
+        <AboutCard
+          title="What is Constual?"
+          copy="Constual is a bilingual health education dApp on Ritual Testnet. It helps users learn common health topics, use education-focused classifiers, ask a simulated bilingual health guidance agent, complete quizzes, and build privacy-safe proof-of-learning."
+          icon={Leaf}
+        />
+        <AboutCard
+          title="Why Constual?"
+          copy="Many people need simple, friendly, bilingual health literacy tools before they can ask better questions and understand common disease topics. Constual turns learning into a calm, trackable experience."
+          icon={Heart}
+        />
+        <AboutCard
+          title="Built on Ritual Testnet"
+          copy="Constual uses Ritual Testnet for learning passports, badges, leaderboard, classifier proof hashes, and agent guide proof hashes while keeping medical information out of the chain."
+          icon={ShieldCheck}
+        />
         <div className="card about-copy">
-          <h2>Constual is a bilingual health education dApp on Ritual Testnet.</h2>
+          <h2>What Constual is NOT</h2>
+          <div className="not-grid">
+            {["Not diagnosis", "Not doctor consultation", "Not a medical record app", "Not a personal diet plan", "Not emergency medical advice"].map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
+        </div>
+        <div className="card about-copy">
+          <h2>Features</h2>
+          <div className="not-grid">
+            {["Constual Passport", "Disease Library", "Constual Classifier", "Constual Agent", "Quiz and Badge", "Leaderboard", "Proof of Learning"].map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
+        </div>
+        <div className="card about-copy">
+          <h2>Privacy-safe design</h2>
           <p>
-            It helps users learn common health topics, use education-focused classifiers, ask a simulated bilingual
-            health guidance agent, complete quizzes, and build privacy-safe proof-of-learning.
+            Constual does not store raw blood pressure, blood sugar, height, weight, symptoms, diagnosis, medication, or
+            medical history onchain. It only stores learning proof, category hash, agent guide hash, XP, badges, and
+            progress.
           </p>
+        </div>
+        <div className="card about-copy creator-card">
+          <h2>Created by Nxrskyaa</h2>
           <p>
-            Constual is not a diagnosis app, not a doctor consultation app, and not a medical record app. It stores
-            learning progress only.
+            Indonesia-based Web3 content creator and builder exploring real-world blockchain applications for health
+            literacy, education, and AI-assisted learning.
           </p>
-          <p>
-            Built on Ritual Testnet, Constual explores how real-world health literacy experiences can connect with
-            blockchain-based learning identity and proof systems.
-          </p>
-          <button className="btn btn-lime" onClick={() => navigate("/app")} type="button">Enter Constual</button>
+          <div className="action-row">
+            <a className="btn btn-secondary" href="https://github.com/nxrskyaa" rel="noreferrer" target="_blank">GitHub</a>
+            <a className="btn btn-secondary" href="https://x.com/nxrskyaa" rel="noreferrer" target="_blank">X</a>
+          </div>
         </div>
         <div className="card future-card">
           <HeroBuddyGroup compact />
-          <h3>Future-ready, V1-safe</h3>
-          <p>Constual is ready for Ritual-native AI exploration later, but V1 adds no LLM precompile, no backend, and no AI API.</p>
+          <h3>Future direction</h3>
+          <p>Richer learning modules, more diseases, better simulated guidance, possible Ritual-native AI inference later, and community health education campaigns. V1 adds no LLM precompile, no backend, and no AI API.</p>
+          <button className="btn btn-lime" onClick={() => navigate("/app")} type="button">Enter Constual</button>
         </div>
       </section>
     </AppPage>
+  );
+}
+
+function AboutCard({ title, copy, icon: Icon }: { title: string; copy: string; icon: LucideIcon }) {
+  return (
+    <div className="card about-copy">
+      <Icon size={28} />
+      <h2>{title}</h2>
+      <p>{copy}</p>
+    </div>
   );
 }
 
@@ -1159,6 +1321,7 @@ function Navbar({
   account,
   connectWallet,
   wrongNetwork,
+  switchNetwork,
   mobileMenuOpen,
   setMobileMenuOpen,
   profile,
@@ -1168,6 +1331,7 @@ function Navbar({
   account: Address | null;
   connectWallet: () => void;
   wrongNetwork: boolean;
+  switchNetwork: () => void;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
   profile: Profile;
@@ -1177,6 +1341,7 @@ function Navbar({
     ? [
         { label: "Features", path: "#features" },
         { label: "Safety", path: "#safety" },
+        { label: "About", path: "/about" },
         { label: "Enter Constual", path: "/app" },
       ]
     : appLinks;
@@ -1193,7 +1358,7 @@ function Navbar({
   return (
     <header className="navbar-wrap">
       <nav className="navbar">
-        <button className="logo-button" onClick={() => navigate(landing ? "/" : "/app")} type="button" aria-label="Constual home">
+        <button className="logo-button" onClick={() => navigate("/")} type="button" aria-label="Constual home">
           <ConstualLogo />
         </button>
 
@@ -1212,7 +1377,7 @@ function Navbar({
 
         <div className="nav-actions">
           {!landing && wrongNetwork && (
-            <button className="btn btn-warning" onClick={switchToRitualTestnet} type="button">
+            <button className="btn btn-warning" onClick={switchNetwork} type="button">
               <Network size={16} />
               Switch
             </button>
@@ -1303,7 +1468,7 @@ function FeatureGrid({ navigate }: { navigate: (path: string) => void }) {
   );
 }
 
-function NetworkGate() {
+function NetworkGate({ switchNetwork }: { switchNetwork: () => void }) {
   return (
     <div className="network-gate">
       <ShieldCheck />
@@ -1311,7 +1476,7 @@ function NetworkGate() {
         <strong>Please switch to Ritual Testnet.</strong>
         <span>Write transactions are disabled until your wallet is on chain ID 1979.</span>
       </div>
-      <button className="btn btn-lime" onClick={switchToRitualTestnet} type="button">Switch to Ritual Testnet</button>
+      <button className="btn btn-lime" onClick={switchNetwork} type="button">Switch to Ritual Testnet</button>
     </div>
   );
 }
@@ -1367,6 +1532,19 @@ function WellnessCharacter({ tone, small = false, className = "" }: { tone: Char
       </div>
       <div className="smile" />
       <div className="leaflet" />
+    </div>
+  );
+}
+
+function DiseaseVisual({ diseaseId }: { diseaseId: number }) {
+  const tone = (["lime", "blue", "orange", "purple", "pink"][(diseaseId - 1) % 5] ?? "lime") as CharacterTone;
+  const Icon = diseases.find((disease) => disease.id === diseaseId)?.icon ?? Leaf;
+  return (
+    <div className="disease-visual">
+      <WellnessCharacter tone={tone} />
+      <div className="disease-icon-orbit">
+        <Icon size={24} />
+      </div>
     </div>
   );
 }
@@ -1478,6 +1656,153 @@ function diseaseBySlug(slug: string) {
   return diseases.find((disease) => slugForDisease(disease) === slug) ?? diseases[0];
 }
 
+type LearningCard = {
+  label: string;
+  title: string;
+  copy: string;
+};
+
+type QuizCard = {
+  question: string;
+  options: string[];
+  answer: number;
+  explanation: string;
+};
+
+function getLearningSections(diseaseId: number, language: number): LearningCard[] {
+  const disease = diseases.find((item) => item.id === diseaseId) ?? diseases[0];
+  const enBase = [
+    ["Definition", `${disease.name} basics`, disease.summary],
+    ["Etiology", "Common causes", "Learn the usual causes and triggers so you can understand risk without self-diagnosing."],
+    ["Risk Factors", "What can increase risk", "Age, environment, daily habits, family history, and exposure patterns can change risk depending on the topic."],
+    ["Symptoms", "Signs to notice", "Symptoms are learning signals. They are not enough for diagnosis without qualified assessment."],
+    ["Diagnosis basics", "How clinicians confirm", "Health workers combine history, examination, and appropriate tests rather than relying on one number or symptom."],
+    ["Treatment basics", "Care is personal", "Treatment decisions belong with qualified professionals. Constual only teaches safe concepts."],
+    ["Prevention", "Small habits help", "Prevention usually combines hygiene, sleep, movement, nutrition, environmental control, and screening where relevant."],
+    ["Red flags", "Know when care is urgent", "Severe, sudden, persistent, or worsening symptoms should be checked promptly, especially breathing trouble, bleeding, confusion, or fainting."],
+    ["Summary", "Ready for quiz", "Review the key ideas, then take the quiz to record privacy-safe proof-of-learning."],
+  ];
+  const idBase = [
+    ["Pengertian", `Dasar ${disease.localName}`, disease.lesson],
+    ["Etiologi", "Penyebab umum", "Pelajari penyebab dan pemicu umum agar kamu memahami risiko tanpa mendiagnosis diri sendiri."],
+    ["Faktor Risiko", "Hal yang meningkatkan risiko", "Usia, lingkungan, kebiasaan, riwayat keluarga, dan pola paparan dapat memengaruhi risiko sesuai topik."],
+    ["Gejala", "Tanda yang perlu diamati", "Gejala adalah sinyal pembelajaran, bukan dasar diagnosis tanpa pemeriksaan tenaga kesehatan."],
+    ["Dasar Diagnosis", "Cara tenaga kesehatan memastikan", "Tenaga kesehatan menggabungkan riwayat, pemeriksaan, dan tes yang sesuai, bukan satu angka atau gejala saja."],
+    ["Dasar Terapi", "Perawatan bersifat personal", "Keputusan terapi harus bersama tenaga kesehatan. Constual hanya mengajarkan konsep aman."],
+    ["Pencegahan", "Kebiasaan kecil membantu", "Pencegahan biasanya menggabungkan kebersihan, tidur, gerak, nutrisi, kontrol lingkungan, dan skrining bila relevan."],
+    ["Tanda Bahaya", "Kapan harus segera mencari bantuan", "Gejala berat, mendadak, menetap, atau memburuk perlu diperiksa segera, terutama sesak, perdarahan, bingung, atau pingsan."],
+    ["Ringkasan", "Siap kuis", "Tinjau ide utama, lalu ikuti kuis untuk mencatat bukti belajar yang aman secara privasi."],
+  ];
+  return (language === 0 ? idBase : enBase).map(([label, title, copy]) => ({ label, title, copy }));
+}
+
+function getQuizQuestions(diseaseId: number, language: number): QuizCard[] {
+  const disease = diseases.find((item) => item.id === diseaseId) ?? diseases[0];
+  if (language === 0) {
+    return [
+      {
+        question: `Apa tujuan utama modul ${disease.localName}?`,
+        options: ["Memberi edukasi aman", "Memberi diagnosis pasti", "Mengganti dokter"],
+        answer: 0,
+        explanation: "Constual hanya untuk edukasi dan bukti belajar, bukan diagnosis.",
+      },
+      {
+        question: "Apa yang harus dilakukan bila ada tanda bahaya?",
+        options: ["Cari bantuan medis", "Tunggu bukti onchain", "Abaikan gejala"],
+        answer: 0,
+        explanation: "Tanda bahaya perlu penilaian medis, bukan hanya edukasi aplikasi.",
+      },
+      {
+        question: "Apa yang disimpan Constual?",
+        options: ["Progress belajar", "Rekam medis lengkap", "Nilai mentah kesehatan"],
+        answer: 0,
+        explanation: "Constual menyimpan progress/bukti belajar, bukan rekam medis.",
+      },
+    ];
+  }
+
+  return [
+    {
+      question: `What is the main purpose of the ${disease.name} module?`,
+      options: ["Safe education", "Definitive diagnosis", "Replacing clinicians"],
+      answer: 0,
+      explanation: "Constual is for education and proof-of-learning, not diagnosis.",
+    },
+    {
+      question: "What should you do when red flags appear?",
+      options: ["Seek medical help", "Wait for onchain proof", "Ignore symptoms"],
+      answer: 0,
+      explanation: "Red flags need medical assessment, not only app-based education.",
+    },
+    {
+      question: "What does Constual store?",
+      options: ["Learning progress", "Full medical records", "Raw health values"],
+      answer: 0,
+      explanation: "Constual stores learning progress/proof, not medical records.",
+    },
+  ];
+}
+
+function getClassifierCopy(language: number) {
+  if (language === 0) {
+    return {
+      kicker: "Pemeriksa angka untuk edukasi",
+      bp: "Cek Tensi",
+      sugar: "Gula Darah",
+      systolic: "Sistolik",
+      diastolic: "Diastolik",
+      sugarValue: "Nilai gula darah",
+      readingType: "Jenis pemeriksaan",
+      fasting: "Puasa",
+      random: "Sewaktu",
+      height: "Tinggi badan dalam cm",
+      weight: "Berat badan dalam kg",
+      empty: "Masukkan nilai untuk melihat kategori edukasi",
+      disclaimer: "Nilai mentah tetap di browser. Jika merekam proof, Constual hanya mengirim hash kategori ke Ritual Testnet.",
+      prepare: "Siapkan Proof Classifier",
+      record: "Rekam Proof Classifier",
+    };
+  }
+
+  return {
+    kicker: "Education-focused number checks",
+    bp: "Blood Pressure",
+    sugar: "Blood Sugar",
+    systolic: "Systolic",
+    diastolic: "Diastolic",
+    sugarValue: "Blood sugar value",
+    readingType: "Reading type",
+    fasting: "Fasting",
+    random: "Random",
+    height: "Height in cm",
+    weight: "Weight in kg",
+    empty: "Enter values to see education category",
+    disclaimer: "Raw values stay in your browser. Recording proof sends only a category hash to Ritual Testnet.",
+    prepare: "Prepare Classifier Proof",
+    record: "Record Classifier Proof",
+  };
+}
+
+function getClassifierResultLabel(category: string, fallback: string, language: number) {
+  if (language !== 0) return fallback;
+  const labels: Record<string, string> = {
+    bp_very_high: "Rentang sangat tinggi",
+    bp_high: "Rentang tinggi",
+    bp_elevated: "Rentang meningkat",
+    bp_normal: "Rentang normal",
+    sugar_low: "Rentang rendah",
+    sugar_random_high: "Gula sewaktu tinggi",
+    sugar_fasting_high: "Gula puasa tinggi",
+    sugar_fasting_elevated: "Gula puasa meningkat",
+    sugar_normal: "Rentang edukasi normal",
+    bmi_underweight: "BMI kurang",
+    bmi_normal: "BMI normal",
+    bmi_overweight: "BMI overweight",
+    bmi_obesity: "BMI rentang obesitas",
+  };
+  return labels[category] ?? fallback;
+}
+
 function normalizeProfile(value: unknown): Profile {
   const source = value as Record<string, unknown> & readonly unknown[];
   const read = (key: keyof Profile, index: number, fallback: unknown = "") => source?.[key] ?? source?.[index] ?? fallback;
@@ -1532,8 +1857,22 @@ function stripX(value: string) {
 }
 
 function readableError(error: unknown) {
-  if (error instanceof Error && error.message.includes("not available")) return error.message;
-  if (error instanceof Error && error.message.toLowerCase().includes("user rejected")) return "Wallet confirmation was rejected.";
+  if (error instanceof Error) {
+    const lower = error.message.toLowerCase();
+    if (
+      lower.includes("not available") ||
+      lower.includes("already completed") ||
+      lower.includes("already claimed") ||
+      lower.includes("not claimable") ||
+      lower.includes("score must") ||
+      lower.includes("invalid diseaseid")
+    ) {
+      return error.message;
+    }
+    if (lower.includes("user rejected")) return "Wallet confirmation was rejected.";
+    if (lower.includes("execution reverted")) return "Transaction reverted. Contract state, ABI, or eligibility check failed.";
+    if (lower.includes("abi")) return "ABI mismatch suspected. Please check ConstualCore function signatures.";
+  }
   return "Transaction failed. Please check wallet, network, and contract state.";
 }
 

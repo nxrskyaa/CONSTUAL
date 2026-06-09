@@ -1,7 +1,6 @@
 import {
   createPublicClient,
-  createWalletClient,
-  custom,
+  defineChain,
   getAddress,
   http,
   keccak256,
@@ -9,18 +8,31 @@ import {
   toBytes,
   type Address,
 } from "viem";
+import { createConfig } from "wagmi";
+import { injected } from "wagmi/connectors";
 
 export const RITUAL_CHAIN_ID = 1979;
 export const RITUAL_CHAIN_HEX = "0x7bb";
 export const CONSTUAL_CORE_ADDRESS = getAddress("0x8b32508B6bB0Ac1b8067dfD1a4CA6E5195181144");
 
-export const ritualTestnet = {
+export const ritualTestnet = defineChain({
   id: RITUAL_CHAIN_ID,
   name: "Ritual Testnet",
   nativeCurrency: { name: "RITUAL", symbol: "RITUAL", decimals: 18 },
-  rpcUrls: { default: { http: ["https://rpc.ritualfoundation.org"] } },
+  rpcUrls: {
+    default: { http: ["https://rpc.ritualfoundation.org"] },
+    public: { http: ["https://rpc.ritualfoundation.org"] },
+  },
   blockExplorers: { default: { name: "Ritual Explorer", url: "https://explorer.ritualfoundation.org" } },
-};
+});
+
+export const wagmiConfig = createConfig({
+  chains: [ritualTestnet],
+  connectors: [injected()],
+  transports: {
+    [ritualTestnet.id]: http("https://rpc.ritualfoundation.org"),
+  },
+});
 
 export const publicClient = createPublicClient({
   chain: ritualTestnet,
@@ -60,17 +72,6 @@ declare global {
   }
 }
 
-export function walletClient() {
-  if (!window.ethereum) {
-    throw new Error("No injected wallet found.");
-  }
-
-  return createWalletClient({
-    chain: ritualTestnet,
-    transport: custom(window.ethereum),
-  });
-}
-
 export async function switchToRitualTestnet() {
   if (!window.ethereum) {
     throw new Error("Install a browser wallet first.");
@@ -104,6 +105,7 @@ export async function switchToRitualTestnet() {
 
 export async function sendConstualTransaction(
   account: Address,
+  writeContractAsync: (request: any) => Promise<`0x${string}`>,
   functionName:
     | "createProfile"
     | "updateProfile"
@@ -113,14 +115,21 @@ export async function sendConstualTransaction(
     | "recordAgentGuide",
   args: readonly unknown[],
 ) {
-  const client = walletClient();
-  const hash = await client.writeContract({
+  await publicClient.simulateContract({
     address: CONSTUAL_CORE_ADDRESS,
     abi: constualAbi,
     functionName,
     account,
     args,
-  } as Parameters<typeof client.writeContract>[0]);
+  } as Parameters<typeof publicClient.simulateContract>[0]);
+
+  const hash = await writeContractAsync({
+    address: CONSTUAL_CORE_ADDRESS,
+    abi: constualAbi,
+    functionName,
+    args,
+    chainId: RITUAL_CHAIN_ID,
+  });
 
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;
