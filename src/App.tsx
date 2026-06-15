@@ -10,6 +10,7 @@ import {
   Copy,
   Droplets,
   ExternalLink,
+  Gamepad2,
   Heart,
   Home,
   Languages,
@@ -29,6 +30,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { getAddress, type Address } from "viem";
 import { useAccount, useChainId, useConfig, useConnect, useDisconnect, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
 import { agentScenarios, diseases, languageLabels, type AgentScenario, type Disease } from "./data";
+import GameCanvas from "./game/GameCanvas";
 import {
   CONSTUAL_CORE_ADDRESS,
   constualAbi,
@@ -75,6 +77,7 @@ type ClassifierKind = "bp" | "sugar" | "bmi";
 type RouteInfo =
   | { name: "landing" }
   | { name: "app" }
+  | { name: "play" }
   | { name: "library" }
   | { name: "disease"; slug: string }
   | { name: "quiz"; slug: string }
@@ -117,6 +120,7 @@ const privacyCopy = "Constual Passport stores learning progress only, not medica
 
 const appLinks = [
   { label: "App", path: "/app", icon: Home },
+  { label: "Play", path: "/play", icon: Gamepad2 },
   { label: "Library", path: "/library", icon: BookOpen },
   { label: "Classifier", path: "/classifier", icon: Activity },
   { label: "Agent", path: "/agent", icon: Bot },
@@ -126,6 +130,7 @@ const appLinks = [
 ] as const;
 
 const featureCards = [
+  { title: "Constual World", copy: "Walk a pixel-art map, talk to health NPCs, take quizzes, and record quests on-chain.", path: "/play", icon: Gamepad2, buddy: "blue" },
   { title: "Constual Passport", copy: "A privacy-safe learning identity for modules, badges, and proof activity.", path: "/passport", icon: UserRound, buddy: "lime" },
   { title: "Disease Library", copy: "Short bilingual modules for common health topics without long walls of text.", path: "/library", icon: BookOpen, buddy: "blue" },
   { title: "Constual Classifier", copy: "Education-focused checks for blood pressure, blood sugar, and BMI categories.", path: "/classifier", icon: Activity, buddy: "orange" },
@@ -863,6 +868,8 @@ function renderRoute(props: RenderProps) {
       return <LandingPage navigate={props.navigate} />;
     case "app":
       return <DashboardPage {...props} />;
+    case "play":
+      return <PlayPage />;
     case "library":
       return <LibraryPage navigate={props.navigate} completedMap={props.completedMap} badgeMap={props.badgeMap} />;
     case "disease":
@@ -882,6 +889,20 @@ function renderRoute(props: RenderProps) {
     case "about":
       return <AboutPage navigate={props.navigate} />;
   }
+}
+
+function PlayPage() {
+  return (
+    <AppPage title="Constual World" kicker="Pixel-art learning game">
+      <section className="card" style={{ padding: 18 }}>
+        <p style={{ marginBottom: 14, color: "var(--muted, #8b95b5)" }}>
+          Walk around with WASD / arrow keys, talk to the health NPCs (press E or click),
+          answer their quizzes, and your completed quests are recorded on Ritual Testnet.
+        </p>
+        <GameCanvas />
+      </section>
+    </AppPage>
+  );
 }
 
 function LandingPage({ navigate }: { navigate: (path: string) => void }) {
@@ -2175,6 +2196,7 @@ function parseRoute(pathname: string): RouteInfo {
   const path = pathname.replace(/\/+$/, "") || "/";
   if (path === "/") return { name: "landing" };
   if (path === "/app") return { name: "app" };
+  if (path === "/play") return { name: "play" };
   if (path === "/library") return { name: "library" };
   if (path === "/classifier") return { name: "classifier" };
   if (path === "/agent") return { name: "agent" };

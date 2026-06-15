@@ -13,6 +13,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.468.0",
+    "phaser": "^3.90.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "typescript": "^5.9.2",
