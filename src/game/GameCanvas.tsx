@@ -1,12 +1,14 @@
 import Phaser from "phaser";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useConnect, useDisconnect, useSwitchChain } from "wagmi";
+import { RITUAL_CHAIN_ID, switchToRitualTestnet } from "../web3";
 import { useConstualGame } from "../hooks/useConstualGame";
 import "./game.css";
 import { gameBridge, type DialogPayload, type NotifyPayload, type XpPayload } from "./bridge";
-import { getZone, passThreshold, scoreFromQuiz } from "./data/zones";
+import { getZone, passThreshold, scoreFromQuiz, zones } from "./data/zones";
+import { portraitPath } from "./config/sprites";
 import MainWorldScene from "./scenes/MainWorldScene";
 import PreloadScene from "./scenes/PreloadScene";
-import ZoneScene from "./scenes/ZoneScene";
 
 type Toast = { id: number; kind: NotifyPayload["kind"]; message: string };
 type QuizState = { zoneId: number; answers: number[] };
@@ -14,9 +16,12 @@ type ResultState = { passed: boolean; correct: number; total: number; score: num
 
 let toastSeq = 0;
 
-export default function GameCanvas() {
+export default function GameCanvas({ onExit }: { onExit?: () => void }) {
   const game = useConstualGame();
   const { account, isConnected, isCorrectChain, profileCreated, profile, isWriting } = game;
+  const { connectors, connectAsync } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { switchChainAsync } = useSwitchChain();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -27,8 +32,6 @@ export default function GameCanvas() {
   const [result, setResult] = useState<ResultState>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [xp, setXp] = useState<XpPayload | null>(null);
-
-  // profile creation mini-form
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ displayName: "", constualUsername: "", xUsername: "", preferredLanguage: 1 });
 
@@ -38,46 +41,36 @@ export default function GameCanvas() {
     window.setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4200);
   }, []);
 
-  // ---- create the Phaser game once, destroy on unmount ----------------------
+  // create the Phaser game once
   useEffect(() => {
     if (!containerRef.current || gameRef.current) return;
-
     const phaserGame = new Phaser.Game({
       type: Phaser.AUTO,
       parent: containerRef.current,
-      backgroundColor: "#0f1424",
+      backgroundColor: "#0c1022",
       pixelArt: true,
-      width: 640,
-      height: 480,
-      scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-      },
-      physics: {
-        default: "arcade",
-        arcade: { gravity: { x: 0, y: 0 }, debug: false },
-      },
-      scene: [PreloadScene, MainWorldScene, ZoneScene],
+      scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH, width: "100%", height: "100%" },
+      physics: { default: "arcade", arcade: { gravity: { x: 0, y: 0 }, debug: false } },
+      scene: [PreloadScene, MainWorldScene],
     });
     gameRef.current = phaserGame;
-
     return () => {
       phaserGame.destroy(true);
       gameRef.current = null;
     };
   }, []);
 
-  // ---- React listens to Phaser-emitted events -------------------------------
+  // Phaser -> React
   useEffect(() => {
-    const offDialog = gameBridge.on("dialog:show", (payload) => {
+    const offDialog = gameBridge.on("dialog:show", (p) => {
       setResult(null);
       setQuiz(null);
       setLineIndex(0);
-      setDialog(payload);
+      setDialog(p);
     });
     const offNotify = gameBridge.on("notify", (n) => pushToast(n.kind, n.message));
-    const offXp = gameBridge.on("xp:notify", (payload) => {
-      setXp(payload);
+    const offXp = gameBridge.on("xp:notify", (p) => {
+      setXp(p);
       window.setTimeout(() => setXp(null), 3200);
     });
     return () => {
@@ -87,21 +80,56 @@ export default function GameCanvas() {
     };
   }, [pushToast]);
 
-  // ---- push wallet/profile state down into Phaser ---------------------------
+  // React -> Phaser: wallet state
   useEffect(() => {
-    const state = {
-      address: account,
-      isConnected,
-      isCorrectChain,
-      profileCreated,
-    };
-    gameRef.current?.registry.set("wallet", state);
-    gameBridge.emit("wallet:state", state);
+    const s = { address: account, isConnected, isCorrectChain, profileCreated };
+    gameRef.current?.registry.set("wallet", s);
+    gameBridge.emit("wallet:state", s);
   }, [account, isConnected, isCorrectChain, profileCreated]);
 
-  // ---- dialog flow ----------------------------------------------------------
+  // React -> Phaser: HUD stats
+  useEffect(() => {
+    const payload = {
+      address: account,
+      xp: profile ? Number(profile.xp) : 0,
+      badges: profile ? Number(profile.badgeCount) : 0,
+      completed: profile ? Number(profile.completedCount) : 0,
+      total: zones.length,
+    };
+    gameRef.current?.registry.set("hud", payload);
+    gameBridge.emit("hud:update", payload);
+  }, [account, profile]);
+
+  // wallet actions
+  const connect = useCallback(async () => {
+    const connector = connectors[0];
+    if (!connector) {
+      pushToast("error", "Install a browser wallet to connect.");
+      return;
+    }
+    try {
+      await connectAsync({ connector });
+    } catch {
+      pushToast("error", "Wallet connection cancelled.");
+    }
+  }, [connectors, connectAsync, pushToast]);
+
+  const switchNetwork = useCallback(async () => {
+    try {
+      await switchChainAsync({ chainId: RITUAL_CHAIN_ID });
+    } catch {
+      try {
+        await switchToRitualTestnet();
+      } catch {
+        pushToast("error", "Could not switch to Ritual Testnet.");
+      }
+    }
+  }, [switchChainAsync, pushToast]);
+
+  // dialog flow
   const dialogLines = dialog?.lines ?? [];
   const isLastLine = lineIndex >= dialogLines.length - 1;
+  const hasQuiz = dialog?.zoneId != null;
 
   const closeDialog = useCallback(() => {
     setDialog(null);
@@ -110,7 +138,7 @@ export default function GameCanvas() {
   }, []);
 
   const startQuiz = useCallback(() => {
-    if (!dialog) return;
+    if (!dialog || dialog.zoneId == null) return;
     const zoneId = dialog.zoneId;
     const zone = getZone(zoneId);
     setDialog(null);
@@ -123,9 +151,8 @@ export default function GameCanvas() {
     gameBridge.emit("quiz:show", { zoneId });
   }, [dialog]);
 
-  // ---- quiz flow ------------------------------------------------------------
+  // quiz flow
   const quizZone = quiz ? getZone(quiz.zoneId) : undefined;
-
   const closeQuiz = useCallback(() => {
     setQuiz(null);
     setResult(null);
@@ -146,25 +173,14 @@ export default function GameCanvas() {
   const submitQuiz = useCallback(async () => {
     if (!quiz || !quizZone) return;
     const total = quizZone.quiz.length;
-    const correct = quizZone.quiz.reduce(
-      (acc, q, i) => acc + (quiz.answers[i] === q.correct ? 1 : 0),
-      0,
-    );
+    const correct = quizZone.quiz.reduce((acc, q, i) => acc + (quiz.answers[i] === q.correct ? 1 : 0), 0);
     const score = scoreFromQuiz(correct, total);
     const passed = correct >= passThreshold(total);
     setResult({ passed, correct, total, score });
+    if (!passed) return;
 
-    if (!passed) return; // let them retry; nothing recorded on-chain
-
-    // Gate the on-chain write behind wallet/profile readiness.
-    if (!isConnected) {
-      pushToast("error", "Connect your wallet to record this quest.");
-      return;
-    }
-    if (!isCorrectChain) {
-      pushToast("error", "Switch to Ritual Testnet (chain 1979) first.");
-      return;
-    }
+    if (!isConnected) return pushToast("error", "Connect your wallet to record this quest.");
+    if (!isCorrectChain) return pushToast("error", "Switch to Ritual Testnet (chain 1979) first.");
     if (!profileCreated) {
       pushToast("info", "Create your Constual Passport to record quests.");
       setShowCreate(true);
@@ -192,7 +208,6 @@ export default function GameCanvas() {
     setQuiz((prev) => (prev && quizZone ? { ...prev, answers: Array(quizZone.quiz.length).fill(-1) } : prev));
   }, [quizZone]);
 
-  // ---- profile creation -----------------------------------------------------
   const submitCreate = useCallback(async () => {
     if (!form.displayName.trim() || !form.constualUsername.trim()) {
       pushToast("error", "Display name and Constual username are required.");
@@ -200,12 +215,7 @@ export default function GameCanvas() {
     }
     try {
       pushToast("info", "Confirm the transaction to create your Passport...");
-      await game.createProfile(
-        form.displayName.trim(),
-        form.constualUsername.trim(),
-        form.xUsername.trim(),
-        Number(form.preferredLanguage),
-      );
+      await game.createProfile(form.displayName.trim(), form.constualUsername.trim(), form.xUsername.trim(), Number(form.preferredLanguage));
       pushToast("success", "Constual Passport created!");
       setShowCreate(false);
     } catch (err) {
@@ -213,51 +223,68 @@ export default function GameCanvas() {
     }
   }, [form, game, pushToast]);
 
-  const npcInitial = useMemo(() => (dialog?.npcName ?? "?").charAt(0).toUpperCase(), [dialog]);
+  const shortAddr = account ? `${account.slice(0, 6)}…${account.slice(-4)}` : null;
 
   return (
-    <div className="cg-wrap">
+    <div className="cg-root">
       <div className="cg-canvas" ref={containerRef} />
 
-      {/* XP / toast notifications */}
+      {/* top bar: exit + wallet */}
+      <div className="cg-topbar">
+        <button className="cg-btn cg-btn-ghost" type="button" onClick={() => (onExit ? onExit() : window.history.back())}>
+          ← Exit
+        </button>
+        <div className="cg-wallet">
+          {!isConnected ? (
+            <button className="cg-btn cg-btn-primary" type="button" onClick={connect}>
+              Connect Wallet
+            </button>
+          ) : !isCorrectChain ? (
+            <button className="cg-btn cg-btn-warn" type="button" onClick={switchNetwork}>
+              Switch to Ritual
+            </button>
+          ) : (
+            <>
+              {!profileCreated && (
+                <button className="cg-btn cg-btn-blue" type="button" onClick={() => setShowCreate(true)}>
+                  Create Passport
+                </button>
+              )}
+              <button className="cg-btn cg-btn-ghost" type="button" onClick={() => disconnect()}>
+                {shortAddr}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* toasts + xp */}
       <div className="cg-toast-stack">
-        {xp && (
-          <div className="cg-xp">
-            ⭐ +{xp.amount} pts · {xp.reason}
-          </div>
-        )}
+        {xp && <div className="cg-xp">⭐ +{xp.amount} pts · {xp.reason}</div>}
         {toasts.map((t) => (
-          <div key={t.id} className={`cg-toast ${t.kind}`}>
-            {t.message}
-          </div>
+          <div key={t.id} className={`cg-toast ${t.kind}`}>{t.message}</div>
         ))}
       </div>
 
-      {/* Dialog box */}
+      {/* RPG dialog */}
       {dialog && (
-        <div className="cg-overlay">
-          <div className="cg-panel">
-            <div className="cg-npc">
-              <div className="cg-npc-avatar">{npcInitial}</div>
-              <div className="cg-npc-name">{dialog.npcName}</div>
-            </div>
-            <div className="cg-dialog-line">{dialogLines[lineIndex]}</div>
-            <div className="cg-row">
-              <span className="cg-dots">
-                {lineIndex + 1} / {dialogLines.length}
-              </span>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button className="cg-btn cg-btn-ghost" onClick={closeDialog} type="button">
-                  Close
-                </button>
-                {isLastLine ? (
-                  <button className="cg-btn cg-btn-primary" onClick={startQuiz} type="button">
-                    Take Quiz
-                  </button>
+        <div className="cg-dialog">
+          <div className="cg-portrait">
+            <img src={portraitPath(dialog.npcKey)} alt={dialog.npcName} />
+          </div>
+          <div className="cg-dialog-body">
+            <div className="cg-speaker">{dialog.npcName}</div>
+            <div className="cg-dialog-text">{dialogLines[lineIndex]}</div>
+            <div className="cg-dialog-actions">
+              <span className="cg-dots">{lineIndex + 1} / {dialogLines.length} ▼</span>
+              <div className="cg-actions-right">
+                <button className="cg-btn cg-btn-ghost" type="button" onClick={closeDialog}>Close</button>
+                {!isLastLine ? (
+                  <button className="cg-btn cg-btn-primary" type="button" onClick={() => setLineIndex((i) => i + 1)}>Next</button>
+                ) : hasQuiz ? (
+                  <button className="cg-btn cg-btn-primary" type="button" onClick={startQuiz}>Take Quiz</button>
                 ) : (
-                  <button className="cg-btn cg-btn-primary" onClick={() => setLineIndex((i) => i + 1)} type="button">
-                    Next
-                  </button>
+                  <button className="cg-btn cg-btn-primary" type="button" onClick={closeDialog}>Got it</button>
                 )}
               </div>
             </div>
@@ -265,43 +292,29 @@ export default function GameCanvas() {
         </div>
       )}
 
-      {/* Quiz modal */}
+      {/* quiz */}
       {quiz && quizZone && (
-        <div className="cg-overlay cg-center">
+        <div className="cg-overlay">
           <div className="cg-panel">
-            <div className="cg-progress">
-              Quiz · {quizZone.name} ({quizZone.nameId})
-            </div>
-
+            <div className="cg-progress">Quiz · {quizZone.name} ({quizZone.nameId})</div>
             {result ? (
               <div className="cg-result">
                 {result.passed ? (
                   <>
                     <strong style={{ color: "#c8f169" }}>Passed! {result.correct}/{result.total} correct.</strong>
-                    <p style={{ marginTop: 8 }}>
-                      Score: <strong>{result.score}</strong> / 100.
-                      {isWriting ? " Recording on-chain..." : ""}
-                    </p>
+                    <p style={{ marginTop: 8 }}>Score: <strong>{result.score}</strong> / 100.{isWriting ? " Recording on-chain..." : ""}</p>
                     <div className="cg-row">
                       <span />
-                      <button className="cg-btn cg-btn-ghost" onClick={closeQuiz} type="button" disabled={isWriting}>
-                        Close
-                      </button>
+                      <button className="cg-btn cg-btn-ghost" type="button" onClick={closeQuiz} disabled={isWriting}>Close</button>
                     </div>
                   </>
                 ) : (
                   <>
-                    <strong style={{ color: "#ffb35c" }}>
-                      {result.correct}/{result.total} correct — almost there.
-                    </strong>
+                    <strong style={{ color: "#ffb35c" }}>{result.correct}/{result.total} correct — almost there.</strong>
                     <p style={{ marginTop: 8 }}>Review what {quizZone.npcName} said and try again.</p>
                     <div className="cg-row">
-                      <button className="cg-btn cg-btn-ghost" onClick={closeQuiz} type="button">
-                        Leave
-                      </button>
-                      <button className="cg-btn cg-btn-primary" onClick={retryQuiz} type="button">
-                        Try Again
-                      </button>
+                      <button className="cg-btn cg-btn-ghost" type="button" onClick={closeQuiz}>Leave</button>
+                      <button className="cg-btn cg-btn-primary" type="button" onClick={retryQuiz}>Try Again</button>
                     </div>
                   </>
                 )}
@@ -310,31 +323,17 @@ export default function GameCanvas() {
               <>
                 {quizZone.quiz.map((q, qi) => (
                   <div key={qi}>
-                    <div className="cg-quiz-q">
-                      {qi + 1}. {q.question}
-                    </div>
+                    <div className="cg-quiz-q">{qi + 1}. {q.question}</div>
                     {q.options.map((opt, oi) => (
-                      <button
-                        key={oi}
-                        type="button"
-                        className={`cg-option ${quiz.answers[qi] === oi ? "cg-selected" : ""}`}
-                        onClick={() => selectOption(qi, oi)}
-                      >
+                      <button key={oi} type="button" className={`cg-option ${quiz.answers[qi] === oi ? "cg-selected" : ""}`} onClick={() => selectOption(qi, oi)}>
                         {opt}
                       </button>
                     ))}
                   </div>
                 ))}
                 <div className="cg-row">
-                  <button className="cg-btn cg-btn-ghost" onClick={closeQuiz} type="button">
-                    Cancel
-                  </button>
-                  <button
-                    className="cg-btn cg-btn-primary"
-                    onClick={submitQuiz}
-                    type="button"
-                    disabled={!allAnswered || isWriting}
-                  >
+                  <button className="cg-btn cg-btn-ghost" type="button" onClick={closeQuiz}>Cancel</button>
+                  <button className="cg-btn cg-btn-primary" type="button" onClick={submitQuiz} disabled={!allAnswered || isWriting}>
                     {isWriting ? "Recording..." : "Submit"}
                   </button>
                 </div>
@@ -344,55 +343,30 @@ export default function GameCanvas() {
         </div>
       )}
 
-      {/* Create Passport mini-form */}
+      {/* create passport */}
       {showCreate && (
-        <div className="cg-overlay cg-center">
+        <div className="cg-overlay">
           <div className="cg-panel">
-            <div className="cg-npc-name" style={{ marginBottom: 6 }}>
-              Create your Constual Passport
-            </div>
-            <p style={{ fontSize: 13, color: "#c0c8e6" }}>
-              A one-time on-chain profile so the game can record your learning quests.
-            </p>
-            <label className="cg-field">
-              Display name
-              <input
-                value={form.displayName}
-                onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))}
-                placeholder="e.g. Sky"
-              />
+            <div className="cg-speaker" style={{ marginBottom: 6 }}>Create your Constual Passport</div>
+            <p style={{ fontSize: 13, color: "#c0c8e6" }}>A one-time on-chain profile so the game can record your learning quests.</p>
+            <label className="cg-field">Display name
+              <input value={form.displayName} onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))} placeholder="e.g. Sky" />
             </label>
-            <label className="cg-field">
-              Constual username
-              <input
-                value={form.constualUsername}
-                onChange={(e) => setForm((f) => ({ ...f, constualUsername: e.target.value }))}
-                placeholder="e.g. sky_learns"
-              />
+            <label className="cg-field">Constual username
+              <input value={form.constualUsername} onChange={(e) => setForm((f) => ({ ...f, constualUsername: e.target.value }))} placeholder="e.g. sky_learns" />
             </label>
-            <label className="cg-field">
-              X username (optional)
-              <input
-                value={form.xUsername}
-                onChange={(e) => setForm((f) => ({ ...f, xUsername: e.target.value }))}
-                placeholder="@handle"
-              />
+            <label className="cg-field">X username (optional)
+              <input value={form.xUsername} onChange={(e) => setForm((f) => ({ ...f, xUsername: e.target.value }))} placeholder="@handle" />
             </label>
-            <label className="cg-field">
-              Preferred language
-              <select
-                value={form.preferredLanguage}
-                onChange={(e) => setForm((f) => ({ ...f, preferredLanguage: Number(e.target.value) }))}
-              >
+            <label className="cg-field">Preferred language
+              <select value={form.preferredLanguage} onChange={(e) => setForm((f) => ({ ...f, preferredLanguage: Number(e.target.value) }))}>
                 <option value={0}>Indonesia</option>
                 <option value={1}>English</option>
               </select>
             </label>
             <div className="cg-row">
-              <button className="cg-btn cg-btn-ghost" onClick={() => setShowCreate(false)} type="button">
-                Cancel
-              </button>
-              <button className="cg-btn cg-btn-primary" onClick={submitCreate} type="button" disabled={isWriting}>
+              <button className="cg-btn cg-btn-ghost" type="button" onClick={() => setShowCreate(false)}>Cancel</button>
+              <button className="cg-btn cg-btn-primary" type="button" onClick={submitCreate} disabled={isWriting}>
                 {isWriting ? "Creating..." : "Create Passport"}
               </button>
             </div>

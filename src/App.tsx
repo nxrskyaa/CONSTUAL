@@ -797,6 +797,10 @@ function App() {
     currentWeb3Issue,
   });
 
+  if (route.name === "play") {
+    return <GameCanvas onExit={() => navigate("/app")} />;
+  }
+
   return (
     <main className={route.name === "landing" ? "site landing-mode" : "site app-mode"}>
       <Navbar
@@ -869,7 +873,7 @@ function renderRoute(props: RenderProps) {
     case "app":
       return <DashboardPage {...props} />;
     case "play":
-      return <PlayPage />;
+      return null;
     case "library":
       return <LibraryPage navigate={props.navigate} completedMap={props.completedMap} badgeMap={props.badgeMap} />;
     case "disease":
@@ -889,20 +893,6 @@ function renderRoute(props: RenderProps) {
     case "about":
       return <AboutPage navigate={props.navigate} />;
   }
-}
-
-function PlayPage() {
-  return (
-    <AppPage title="Constual World" kicker="Pixel-art learning game">
-      <section className="card" style={{ padding: 18 }}>
-        <p style={{ marginBottom: 14, color: "var(--muted, #8b95b5)" }}>
-          Walk around with WASD / arrow keys, talk to the health NPCs (press E or click),
-          answer their quizzes, and your completed quests are recorded on Ritual Testnet.
-        </p>
-        <GameCanvas />
-      </section>
-    </AppPage>
-  );
 }
 
 function LandingPage({ navigate }: { navigate: (path: string) => void }) {

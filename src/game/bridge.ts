@@ -11,13 +11,22 @@ export type WalletState = {
 };
 
 export type DialogPayload = {
-  zoneId: number;
+  zoneId: number | null; // null = dialog-only NPC (no quiz)
+  npcKey: string;
   npcName: string;
   lines: string[];
 };
 
 export type QuizPayload = {
   zoneId: number;
+};
+
+export type HudPayload = {
+  address: string | null;
+  xp: number;
+  badges: number;
+  completed: number;
+  total: number;
 };
 
 // Result of an on-chain write, sent back from React into Phaser so a scene can
@@ -44,6 +53,7 @@ export type XpPayload = {
 export type GameEvents = {
   // React -> Phaser
   "wallet:state": WalletState;
+  "hud:update": HudPayload;
   "tx:result": TxResultPayload;
   "zone:enter": { zoneId: number };
 
