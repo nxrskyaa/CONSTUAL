@@ -22,7 +22,9 @@
     "wagmi": "^3.6.16"
   },
   "devDependencies": {
+    "@types/pngjs": "^6.0.5",
     "@types/react": "^19.1.12",
-    "@types/react-dom": "^19.1.9"
+    "@types/react-dom": "^19.1.9",
+    "pngjs": "^7.0.0"
   }
 }
