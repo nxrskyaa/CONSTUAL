@@ -1857,6 +1857,7 @@ function Navbar({
         </div>
 
         <div className="nav-actions">
+          <ThemeToggle />
           {!landing && wrongNetwork && (
             <button className="btn btn-warning wallet-switch" onClick={switchNetwork} type="button">
               <Network size={16} />
@@ -1977,6 +1978,29 @@ function FeatureGrid({ navigate }: { navigate: (path: string) => void }) {
         </motion.button>
       ))}
     </div>
+  );
+}
+
+function ThemeToggle() {
+  const [dark, setDark] = useState(() =>
+    typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "dark",
+  );
+  const toggle = () => {
+    const next = !dark;
+    setDark(next);
+    const root = document.documentElement;
+    if (next) root.setAttribute("data-theme", "dark");
+    else root.removeAttribute("data-theme");
+    try {
+      localStorage.setItem("constual-theme", next ? "dark" : "light");
+    } catch {
+      /* ignore storage errors */
+    }
+  };
+  return (
+    <button className="theme-toggle" onClick={toggle} type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
+      {dark ? "☀️" : "🌙"}
+    </button>
   );
 }
 

@@ -2893,9 +2893,12 @@ p {
 :root {
   --pixel: "Press Start 2P", monospace;
   --retro: "Pixelify Sans", ui-monospace, monospace;
-  --pix-shadow: 4px 4px 0 rgba(33, 33, 29, 0.22);
-  --pix-shadow-sm: 3px 3px 0 rgba(33, 33, 29, 0.2);
-  --pix-border: 2px solid #21211d;
+  --pix-ink: #21211d;
+  --pix-shadow-c: rgba(33, 33, 29, 0.22);
+  --pix-shadow-c-sm: rgba(33, 33, 29, 0.2);
+  --pix-shadow: 4px 4px 0 var(--pix-shadow-c);
+  --pix-shadow-sm: 3px 3px 0 var(--pix-shadow-c-sm);
+  --pix-border: 2px solid var(--pix-ink);
 }
 
 /* readable pixel font everywhere (replaces the generic sans) */
@@ -2920,7 +2923,7 @@ button {
 .site h4 {
   font-family: var(--retro) !important;
   letter-spacing: 0.5px;
-  text-shadow: 2px 2px 0 rgba(33, 33, 29, 0.12);
+  text-shadow: 2px 2px 0 var(--pix-shadow-c);
 }
 
 /* tiny accents in a true 8-bit face */
@@ -2994,4 +2997,69 @@ button {
 /* crisp pixel scaling for raster art */
 .site img {
   image-rendering: pixelated;
+}
+
+/* ============================================================
+   DARK MODE — flips the surface/text tokens; the lime accent and
+   the retro skin follow along. Toggled via data-theme="dark" on
+   <html> (see the navbar switch + the no-FOUC init in index.html).
+   ============================================================ */
+html[data-theme="dark"] {
+  --color-charcoal: #e9edf5;
+  --color-ink: #f2f5fb;
+  --color-white: #0d0f17;
+  --color-soft: #161a26;
+  --color-navy: #070a13;
+  --color-muted: #95a1ba;
+  --color-line: rgba(255, 255, 255, 0.14);
+  --color-lime: #c8f169;
+  --color-lime-soft: rgba(200, 241, 105, 0.14);
+  --shadow-soft: 0 24px 80px rgba(0, 0, 0, 0.55);
+  --shadow-card: 0 16px 42px rgba(0, 0, 0, 0.5);
+  --pix-ink: rgba(255, 255, 255, 0.26);
+  --pix-shadow-c: rgba(0, 0, 0, 0.55);
+  --pix-shadow-c-sm: rgba(0, 0, 0, 0.5);
+  color: var(--color-charcoal);
+  background: var(--color-white);
+}
+html[data-theme="dark"] body,
+html[data-theme="dark"] .site {
+  background: var(--color-white);
+  color: var(--color-charcoal);
+}
+/* keep lime-accent surfaces readable (dark text on light-green) */
+html[data-theme="dark"] .btn-lime,
+html[data-theme="dark"] .btn-dark,
+html[data-theme="dark"] .wallet-connect,
+html[data-theme="dark"] .nav-pill .active,
+html[data-theme="dark"] .nav-pill .active * {
+  color: #14210a !important;
+}
+/* surfaces that were hard-white in light mode */
+html[data-theme="dark"] .wallet-pill,
+html[data-theme="dark"] .wallet-menu,
+html[data-theme="dark"] .nav-pill,
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background: var(--color-soft);
+  color: var(--color-charcoal);
+}
+/* theme toggle button in the navbar */
+.theme-toggle {
+  min-height: 46px;
+  min-width: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--pix-border);
+  border-radius: 8px;
+  background: var(--color-soft);
+  color: var(--color-charcoal);
+  box-shadow: var(--pix-shadow-sm);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.theme-toggle:active {
+  transform: translate(1px, 1px);
 }

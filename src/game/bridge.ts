@@ -58,6 +58,7 @@ export type GameEvents = {
   "zone:enter": { zoneId: number };
 
   // Phaser -> React
+  "game:ready": void;
   "dialog:show": DialogPayload;
   "dialog:hide": void;
   "quiz:show": QuizPayload;

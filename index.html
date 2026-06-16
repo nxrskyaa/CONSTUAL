@@ -12,6 +12,15 @@
     <style>
       @keyframes blink { 50% { opacity: 0; } }
     </style>
+    <script>
+      // apply saved theme before paint to avoid a flash
+      (function () {
+        try {
+          var t = localStorage.getItem("constual-theme");
+          if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+        } catch (e) {}
+      })();
+    </script>
     <title>Constual</title>
   </head>
   <body>
