@@ -14,12 +14,12 @@ const WORLD_W = MAP_W * TILE_SIZE; // 1600
 const WORLD_H = MAP_H * TILE_SIZE; // 1280
 const INTERACT_RANGE = 84;
 const CAM_ZOOM = 1.5;
-const PLAYER_SCALE = 0.3; // 220px frame -> ~66px, *zoom 1.5 -> ~99px on screen
-const NPC_SCALE = 0.28;
-const CHAR_PX = 220 * PLAYER_SCALE; // ~66
+const PLAYER_SCALE = 0.27; // the player is a small cat — kept slightly under the NPCs
+const NPC_SCALE = 0.32;
+const NPC_TOP = Math.round(220 * NPC_SCALE * 0.8); // px above a sprite's anchor for tags
 
-// pond footprint (tiles)
-const POND = { tx: 16, ty: 24, tw: 8, th: 6 };
+// pond footprint (tiles) — kept inside the coast quadrant, clear of the plaza paths
+const POND = { tx: 5, ty: 24, tw: 8, th: 6 };
 
 const T = { GRASS: 0, GRASS2: 1, PATH: 2, WATER: 3, SAND: 4, MYSTIC: 5, COAST: 6, FLOWER: 7 };
 
@@ -27,17 +27,17 @@ type Area = "forest" | "coast" | "desert" | "mystic" | "plaza";
 
 interface Npc {
   def: NpcDef;
-  sprite: Phaser.Types.Physics.Arcade.SpriteWithStaticBody;
+  container: Phaser.GameObjects.Container;
+  visual: Phaser.GameObjects.Sprite;
   tag: Phaser.GameObjects.Text;
   bubble: Phaser.GameObjects.Text;
+  phase: number;
 }
 
 export default class MainWorldScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Container;
   private playerBody!: Phaser.Physics.Arcade.Body;
   private playerVisual!: Phaser.GameObjects.Sprite;
-  private playerBob!: Phaser.Tweens.Tween;
-  private bobOn = false;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
   private keyShift!: Phaser.Input.Keyboard.Key;
@@ -82,6 +82,7 @@ export default class MainWorldScene extends Phaser.Scene {
     this.buildWater();
     this.buildScenery();
     this.spawnBuildings();
+    this.spawnLandmarks();
     this.spawnPlayer();
     this.spawnNpcs();
     this.physics.add.collider(this.player, this.solids);
@@ -316,11 +317,34 @@ export default class MainWorldScene extends Phaser.Scene {
     const py = POND.ty * TILE_SIZE;
     const pw = POND.tw * TILE_SIZE;
     const ph = POND.th * TILE_SIZE;
-    const water = this.add.tileSprite(px, py, pw, ph, "water_tile").setOrigin(0).setDepth(0);
-    water.setAlpha(0.85).setTint(0x4488cc);
+    const cx = px + pw / 2;
+    const cy = py + ph / 2;
+
+    // shoreline: sandy bank ring + darker wet edge, drawn under the water
+    const bank = this.add.graphics().setDepth(-8);
+    bank.fillStyle(0xd8c08a, 1).fillRoundedRect(px - 14, py - 12, pw + 28, ph + 24, 22);
+    bank.fillStyle(0xb7a06e, 1).fillRoundedRect(px - 6, py - 5, pw + 12, ph + 10, 16);
+
+    // water surface (rounded) — a tinted scrolling tilesprite masked to a rounded rect
+    const water = this.add.tileSprite(px, py, pw, ph, "water_tile").setOrigin(0).setDepth(-6);
+    water.setAlpha(0.92).setTint(0x4a90d9);
+    const maskShape = this.make.graphics({ x: 0, y: 0 }, false);
+    maskShape.fillStyle(0xffffff, 1).fillRoundedRect(px, py, pw, ph, 14);
+    water.setMask(maskShape.createGeometryMask());
     this.waterTiles.push(water);
 
-    const block = this.add.rectangle(px + pw / 2, py + ph / 2, pw, ph).setVisible(false);
+    // stone rim outline
+    const rim = this.add.graphics().setDepth(-5);
+    rim.lineStyle(3, 0x6b5b3a, 1).strokeRoundedRect(px - 2, py - 2, pw + 4, ph + 4, 14);
+
+    // a few rocks around the rim for a natural edge
+    const rimSpots: [number, number][] = [
+      [px + 6, py + 4], [px + pw - 8, py + 6], [px + pw - 4, py + ph - 6], [px + 10, py + ph - 4],
+    ];
+    for (const [rx, ry] of rimSpots) this.add.image(rx, ry, "rock").setOrigin(0.5, 1).setDepth(ry);
+
+    // block walking onto the water
+    const block = this.add.rectangle(cx, cy, pw - 8, ph - 8).setVisible(false);
     this.physics.add.existing(block, true);
     this.solids.add(block);
   }
@@ -466,30 +490,41 @@ export default class MainWorldScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- player
   private spawnPlayer(): void {
-    // A single consistent frame inside a container; the container carries the
-    // physics body so the visual never rescales (no "size glitch") and we can
-    // bob the visual independently for a smooth walk.
+    // Single consistent frame in a container; the container holds the physics
+    // body so the visual never rescales. Idle/walk life comes from a smooth
+    // sine bob applied to the visual in update() (pure position, no size change).
     const visual = this.add.sprite(0, 0, PLAYER_KEY, 1).setOrigin(0.5, 0.82).setScale(PLAYER_SCALE);
     this.playerVisual = visual;
 
-    const c = this.add.container(25 * TILE_SIZE, 20 * TILE_SIZE, [visual]);
+    const c = this.add.container(25 * TILE_SIZE, 24 * TILE_SIZE, [visual]);
     this.physics.world.enable(c);
     const body = c.body as Phaser.Physics.Arcade.Body;
-    body.setSize(30, 18);
-    body.setOffset(-15, -2);
+    body.setSize(28, 16);
+    body.setOffset(-14, -2);
     body.setCollideWorldBounds(true);
     this.player = c;
     this.playerBody = body;
+  }
 
-    this.playerBob = this.tweens.add({
-      targets: visual,
-      y: -6,
-      duration: 220,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.easeInOut",
-      paused: true,
-    });
+  // GWK statue, Balinese temple, and the waving Ritual flag at the world center.
+  private spawnLandmarks(): void {
+    const ts = TILE_SIZE;
+    this.addLandmark(42 * ts, 33 * ts, "lm_gwk", 0.6, 96, 30);
+    this.addLandmark(6 * ts, 9 * ts, "lm_balinese", 0.52, 96, 28);
+
+    const fx = 25 * ts;
+    const fy = 20 * ts;
+    const flag = this.add.image(fx, fy, "lm_flag").setOrigin(0.5, 1).setScale(0.7);
+    flag.setDepth(fy);
+    // gentle wind: subtle horizontal "wave" + slight sway
+    this.tweens.add({ targets: flag, scaleX: { from: 0.7, to: 0.64 }, duration: 820, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    this.tweens.add({ targets: flag, angle: { from: -1.6, to: 1.6 }, duration: 1500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+  }
+
+  private addLandmark(x: number, y: number, key: string, scale: number, collW: number, collH: number): void {
+    const img = this.add.image(x, y, key).setOrigin(0.5, 1).setScale(scale);
+    img.setDepth(y);
+    this.addStaticCollider(x, y - collH / 2, collW, collH);
   }
 
   // ---------------------------------------------------------------- npcs
@@ -497,12 +532,14 @@ export default class MainWorldScene extends Phaser.Scene {
     for (const def of NPCS) {
       const x = def.tileX * TILE_SIZE + TILE_SIZE / 2;
       const y = def.tileY * TILE_SIZE + TILE_SIZE;
-      // single consistent frame; life comes from wandering, not frame swaps
-      const sprite = this.physics.add.staticSprite(x, y, def.spriteKey, 0).setScale(NPC_SCALE).setOrigin(0.5, 0.85);
-      sprite.setFrame(0);
+      // visual sprite in a container so wander (container x/y) and idle bob
+      // (visual y) never fight; single frame keeps size consistent
+      const visual = this.add.sprite(0, 0, def.spriteKey, 0).setOrigin(0.5, 0.85).setScale(NPC_SCALE);
+      const container = this.add.container(x, y, [visual]);
+      visual.setInteractive({ useHandCursor: true });
 
       const tag = this.add
-        .text(x, y - CHAR_PX, def.name, {
+        .text(x, y - NPC_TOP, def.name, {
           fontFamily: "monospace",
           fontSize: "11px",
           color: "#e8f4fd",
@@ -512,61 +549,67 @@ export default class MainWorldScene extends Phaser.Scene {
         .setOrigin(0.5);
 
       const bubble = this.add
-        .text(x, y - CHAR_PX - 12, "!", { fontFamily: "monospace", fontSize: "16px", color: "#ffe066", fontStyle: "bold" })
+        .text(x, y - NPC_TOP - 12, "!", { fontFamily: "monospace", fontSize: "16px", color: "#ffe066", fontStyle: "bold" })
         .setOrigin(0.5)
         .setVisible(false);
 
-      const npc: Npc = { def, sprite, tag, bubble };
+      const npc: Npc = { def, container, visual, tag, bubble, phase: Phaser.Math.Between(0, 6000) };
       this.npcs.push(npc);
 
-      sprite.setInteractive({ useHandCursor: true });
-      sprite.on("pointerdown", () => this.interactWith(npc));
+      visual.on("pointerdown", () => this.interactWith(npc));
 
-      // roam around home so NPCs actually change position
       if (def.wander) this.scheduleWander(npc, x, y);
 
       // occasional music note via timer (not in update)
       this.time.addEvent({
-        delay: Phaser.Math.Between(6000, 12000),
+        delay: Phaser.Math.Between(7000, 14000),
         loop: true,
         callback: () => {
-          if (!sprite.visible) return;
+          if (!container.visible) return;
           const note = this.add
-            .text(sprite.x + 12, sprite.y - CHAR_PX, "♪", { fontFamily: "monospace", fontSize: "14px", color: "#9fe7ff" })
+            .text(container.x + 12, container.y - NPC_TOP, "♪", { fontFamily: "monospace", fontSize: "14px", color: "#9fe7ff" })
             .setOrigin(0.5)
-            .setDepth(sprite.y + 2);
+            .setDepth(container.y + 2);
           this.tweens.add({ targets: note, y: note.y - 26, alpha: 0, duration: 1600, onComplete: () => note.destroy() });
         },
       });
     }
   }
 
-  // NPCs stroll to random nearby points (with pauses) so the world feels alive.
+  // NPCs alternate between strolling to a nearby point and pausing to "look
+  // around" (a quick facing flip), so motion feels varied rather than templated.
   private scheduleWander(npc: Npc, homeX: number, homeY: number): void {
-    const radius = 60;
+    const radius = 64;
     const step = () => {
-      if (!npc.sprite.active) return;
+      if (!npc.container.active) return;
+      const roll = Phaser.Math.FloatBetween(0, 1);
+      if (roll < 0.35) {
+        // pause and glance the other way
+        npc.visual.setFlipX(!npc.visual.flipX);
+        this.time.delayedCall(Phaser.Math.Between(900, 2200), step);
+        return;
+      }
       const tx = Phaser.Math.Clamp(homeX + Phaser.Math.Between(-radius, radius), TILE_SIZE, WORLD_W - TILE_SIZE);
       const ty = Phaser.Math.Clamp(homeY + Phaser.Math.Between(-radius, radius), TILE_SIZE, WORLD_H - TILE_SIZE);
-      npc.sprite.setFlipX(tx < npc.sprite.x);
-      const dist = Phaser.Math.Distance.Between(npc.sprite.x, npc.sprite.y, tx, ty);
+      npc.visual.setFlipX(tx < npc.container.x);
+      const dist = Phaser.Math.Distance.Between(npc.container.x, npc.container.y, tx, ty);
       this.tweens.add({
-        targets: npc.sprite,
+        targets: npc.container,
         x: tx,
         y: ty,
-        duration: Math.max(700, dist * 16),
+        duration: Math.max(650, dist * 15),
         ease: "Sine.easeInOut",
-        onComplete: () => this.time.delayedCall(Phaser.Math.Between(700, 2600), step),
+        onComplete: () => this.time.delayedCall(Phaser.Math.Between(600, 2400), step),
       });
     };
-    this.time.delayedCall(Phaser.Math.Between(300, 2200), step);
+    this.time.delayedCall(Phaser.Math.Between(300, 2400), step);
   }
 
   private markZoneComplete(zoneId: number): void {
     this.completedZones.add(zoneId);
     const n = this.npcs.find((e) => e.def.zoneId === zoneId);
     if (n) {
-      n.sprite.setTint(0x00ff88);
+      n.visual.setTint(0x00ff88);
       n.tag.setText(n.def.name + " ✓");
     }
     this.refreshHud();
@@ -689,7 +732,7 @@ export default class MainWorldScene extends Phaser.Scene {
     }
     for (const n of this.npcs) {
       g.fillStyle(n.def.zoneId != null ? 0xffe066 : 0x00ff88, 1);
-      g.fillCircle(ox + n.sprite.x * sx, oy + n.sprite.y * sy, 1.8);
+      g.fillCircle(ox + n.container.x * sx, oy + n.container.y * sy, 1.8);
     }
     g.fillStyle(0xff5d6c, 1).fillCircle(ox + this.player.x * sx, oy + this.player.y * sy, 2.6);
   }
@@ -700,7 +743,7 @@ export default class MainWorldScene extends Phaser.Scene {
     let nearest: Npc | null = null;
     let best = INTERACT_RANGE;
     for (const n of this.npcs) {
-      const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, n.sprite.x, n.sprite.y);
+      const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, n.container.x, n.container.y);
       if (d < best) {
         best = d;
         nearest = n;
@@ -711,14 +754,9 @@ export default class MainWorldScene extends Phaser.Scene {
 
   private interactWith(npc: Npc): void {
     if (this.interactLocked) return;
-    if (Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.sprite.x, npc.sprite.y) > INTERACT_RANGE * 1.8) return;
+    if (Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.container.x, npc.container.y) > INTERACT_RANGE * 1.8) return;
     this.interactLocked = true;
     this.playerBody.setVelocity(0, 0);
-    if (this.bobOn) {
-      this.playerBob.pause();
-      this.playerVisual.y = 0;
-      this.bobOn = false;
-    }
     gameBridge.emit("dialog:show", {
       zoneId: npc.def.zoneId,
       npcKey: npc.def.key,
@@ -769,19 +807,15 @@ export default class MainWorldScene extends Phaser.Scene {
     body.setVelocity(vx, vy);
 
     const moving = vx !== 0 || vy !== 0;
-    if (moving) {
-      if (vx < -1) this.facing = -1;
-      else if (vx > 1) this.facing = 1;
-      this.playerVisual.setFlipX(this.facing === -1);
-      if (!this.bobOn) {
-        this.playerBob.resume();
-        this.bobOn = true;
-      }
-    } else if (this.bobOn) {
-      this.playerBob.pause();
-      this.playerVisual.y = 0;
-      this.bobOn = false;
-    }
+    if (moving && vx < -1) this.facing = -1;
+    else if (moving && vx > 1) this.facing = 1;
+    this.playerVisual.setFlipX(this.facing === -1);
+
+    // smooth sine bob — gentle when idle, bouncier when walking (no rescale)
+    const t = this.time.now;
+    const amp = moving ? 5 : 2.2;
+    const spd = moving ? 0.013 : 0.005;
+    this.playerVisual.y = -Math.abs(Math.sin(t * spd)) * amp;
 
     this.player.setDepth(this.player.y);
 
@@ -789,8 +823,8 @@ export default class MainWorldScene extends Phaser.Scene {
     let nearest: Npc | null = null;
     let best = INTERACT_RANGE;
     for (const n of this.npcs) {
-      const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, n.sprite.x, n.sprite.y);
-      n.bubble.setVisible(n.sprite.visible && d < INTERACT_RANGE * 1.6);
+      const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, n.container.x, n.container.y);
+      n.bubble.setVisible(n.container.visible && d < INTERACT_RANGE * 1.6);
       if (d < best) {
         best = d;
         nearest = n;
@@ -799,7 +833,7 @@ export default class MainWorldScene extends Phaser.Scene {
     if (nearest) {
       const cam = this.cameras.main;
       this.prompt.setVisible(true);
-      this.prompt.setPosition((nearest.sprite.x - cam.worldView.x) * cam.zoom, (nearest.sprite.y - CHAR_PX - cam.worldView.y) * cam.zoom);
+      this.prompt.setPosition((nearest.container.x - cam.worldView.x) * cam.zoom, (nearest.container.y - NPC_TOP - cam.worldView.y) * cam.zoom);
     } else {
       this.prompt.setVisible(false);
     }
@@ -807,17 +841,20 @@ export default class MainWorldScene extends Phaser.Scene {
 
   private updateNpcs(): void {
     const view = this.cameras.main.worldView;
+    const t = this.time.now;
     for (const n of this.npcs) {
-      const visible = Phaser.Geom.Rectangle.Overlaps(view, new Phaser.Geom.Rectangle(n.sprite.x - 60, n.sprite.y - 90, 120, 130));
-      n.sprite.setVisible(visible);
+      const visible = Phaser.Geom.Rectangle.Overlaps(view, new Phaser.Geom.Rectangle(n.container.x - 60, n.container.y - 100, 120, 140));
+      n.container.setVisible(visible);
       n.tag.setVisible(visible);
       if (!visible) {
         n.bubble.setVisible(false);
         continue;
       }
-      n.sprite.setDepth(n.sprite.y);
-      n.tag.setPosition(n.sprite.x, n.sprite.y - CHAR_PX).setDepth(n.sprite.y + 1);
-      n.bubble.setPosition(n.sprite.x, n.sprite.y - CHAR_PX - 12).setDepth(n.sprite.y + 1);
+      // gentle breathing/idle bob on the visual (independent of wander)
+      n.visual.y = -Math.abs(Math.sin((t + n.phase) * 0.004)) * 2.6;
+      n.container.setDepth(n.container.y);
+      n.tag.setPosition(n.container.x, n.container.y - NPC_TOP).setDepth(n.container.y + 1);
+      n.bubble.setPosition(n.container.x, n.container.y - NPC_TOP - 12).setDepth(n.container.y + 1);
     }
   }
 }

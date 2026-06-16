@@ -11,4 +11,4 @@ constual-*.png
 .env
 .env.*
 !.env.example
-characters/
+/characters/

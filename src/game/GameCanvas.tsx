@@ -9,6 +9,7 @@ import { getZone, passThreshold, scoreFromQuiz, zones } from "./data/zones";
 import { portraitPath } from "./config/sprites";
 import MainWorldScene from "./scenes/MainWorldScene";
 import PreloadScene from "./scenes/PreloadScene";
+import { MusicSystem } from "./systems/MusicSystem";
 
 type Toast = { id: number; kind: NotifyPayload["kind"]; message: string };
 type QuizState = { zoneId: number; answers: number[] };
@@ -25,6 +26,8 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
+  const musicRef = useRef<MusicSystem | null>(null);
+  const [muted, setMuted] = useState(false);
 
   const [dialog, setDialog] = useState<DialogPayload | null>(null);
   const [lineIndex, setLineIndex] = useState(0);
@@ -68,6 +71,33 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
       phaserGame?.destroy(true);
       gameRef.current = null;
     };
+  }, []);
+
+  // background music — starts on the first user gesture (autoplay policy)
+  useEffect(() => {
+    const music = new MusicSystem();
+    musicRef.current = music;
+    const startOnce = () => {
+      music.start();
+      window.removeEventListener("pointerdown", startOnce);
+      window.removeEventListener("keydown", startOnce);
+    };
+    window.addEventListener("pointerdown", startOnce);
+    window.addEventListener("keydown", startOnce);
+    return () => {
+      window.removeEventListener("pointerdown", startOnce);
+      window.removeEventListener("keydown", startOnce);
+      music.destroy();
+      musicRef.current = null;
+    };
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    setMuted((prev) => {
+      const next = !prev;
+      musicRef.current?.setMuted(next);
+      return next;
+    });
   }, []);
 
   // Phaser -> React
@@ -260,9 +290,14 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
 
       {/* top bar: exit + wallet */}
       <div className="cg-topbar">
-        <button className="cg-btn cg-btn-ghost" type="button" onClick={() => (onExit ? onExit() : window.history.back())}>
-          ← Exit
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="cg-btn cg-btn-ghost" type="button" onClick={() => (onExit ? onExit() : window.history.back())}>
+            ← Exit
+          </button>
+          <button className="cg-btn cg-btn-ghost" type="button" onClick={toggleMute} aria-label="Toggle music">
+            {muted ? "🔇" : "🔊"}
+          </button>
+        </div>
         <div className="cg-wallet">
           {!isConnected ? (
             <button className="cg-btn cg-btn-primary" type="button" onClick={connect}>
