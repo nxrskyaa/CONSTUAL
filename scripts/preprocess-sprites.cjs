@@ -31,13 +31,25 @@ const CHARACTERS = [
   { key: "seesac", file: "seesac.png", frames: 4 },
   { key: "siggy_anime", file: "siggy_anime.png", frames: 4 },
   { key: "decka", file: "decka.png", frames: 4 },
-  { key: "nxr", file: "nxr (31).png", frames: 4 },
+  { key: "nxr", file: "nxr.png", frames: 4 },
   { key: "rikky", file: "rikky.png", frames: 4 },
   { key: "rizan", file: "rizan.png", frames: 4 },
   { key: "jez", file: "jez.png", frames: 4 },
   { key: "stefan", file: "stefan.png", frames: 4 },
   { key: "josh", file: "josh.png", frames: 4 },
+  { key: "evo", file: "Evo.png", frames: 6 },
+  { key: "asceno", file: "asceno.png", frames: 4 },
+  { key: "jepanya", file: "jepanya.png", frames: 6 },
 ];
+
+// Single-image landmark buildings + flag -> transparent trimmed PNGs.
+const BUILD_DIR = path.join(__dirname, "..", "public", "buildings");
+const LANDMARKS = [
+  { key: "balinese", file: "Balinese.png", targetH: 340 },
+  { key: "gwk", file: "GWK.png", targetH: 320 },
+  { key: "ritualflag", file: "ritualflag.png", targetH: 150 },
+];
+const BUILD_SRC = "D:/building";
 
 const MAGENTA_TOL = 60; // distance threshold from pure magenta
 const DILATE = 7; // px to merge nearby sprite parts
@@ -224,8 +236,66 @@ function main() {
     );
   }
 
+  // --- landmark buildings + flag (single transparent sprite each) ---
+  fs.mkdirSync(BUILD_DIR, { recursive: true });
+  for (const lm of LANDMARKS) {
+    const p = path.join(BUILD_SRC, lm.file);
+    if (!fs.existsSync(p)) { console.warn("MISSING", p); continue; }
+    const png = PNG.sync.read(fs.readFileSync(p));
+    const out = trimKeyScale(png, lm.targetH);
+    fs.writeFileSync(path.join(BUILD_DIR, lm.key + ".png"), PNG.sync.write(out));
+    console.log(`landmark ${lm.key.padEnd(11)} -> ${out.width}x${out.height}`);
+  }
+
   console.log("\n--- sprites config ---");
   console.log(JSON.stringify(config, null, 2));
+}
+
+// Remove magenta, trim to content bbox, scale to a target height; transparent.
+function trimKeyScale(png, targetH) {
+  const { width: w, height: h, data } = png;
+  let minX = w, minY = h, maxX = 0, maxY = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (isMagenta(data[i], data[i + 1], data[i + 2])) {
+        data[i + 3] = 0;
+      } else if (data[i + 3] > 20) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  // desaturate magenta fringe
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] > 0 && data[i + 3] < 215) {
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      if (r > 110 && b > 110 && r + b > g * 2 + 60) {
+        data[i] = Math.max(0, r - 45);
+        data[i + 2] = Math.max(0, b - 45);
+      }
+    }
+  }
+  const bw = maxX - minX + 1, bh = maxY - minY + 1;
+  const scale = targetH / bh;
+  const ow = Math.max(1, Math.round(bw * scale));
+  const oh = targetH;
+  const out = new PNG({ width: ow, height: oh });
+  for (let y = 0; y < oh; y++) {
+    for (let x = 0; x < ow; x++) {
+      const sx = minX + Math.min(bw - 1, Math.floor(x / scale));
+      const sy = minY + Math.min(bh - 1, Math.floor(y / scale));
+      const si = (sy * w + sx) * 4;
+      const di = (y * ow + x) * 4;
+      out.data[di] = data[si];
+      out.data[di + 1] = data[si + 1];
+      out.data[di + 2] = data[si + 2];
+      out.data[di + 3] = data[si + 3];
+    }
+  }
+  return out;
 }
 
 main();
