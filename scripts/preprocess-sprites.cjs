@@ -59,6 +59,21 @@ const LANDMARKS = [
 ];
 const BUILD_SRC = "D:/building";
 
+// Reference building art (single pixel-art building per image, magenta bg) ->
+// transparent trimmed PNGs used directly as in-game buildings.
+const BUILD_REF_SRC = "D:/buildings";
+const BUILDING_REFS = [
+  { key: "b1", file: "ChatGPT Image Jun 16, 2026, 10_34_16 PM (1).png", targetH: 200 },
+  { key: "b2", file: "ChatGPT Image Jun 16, 2026, 10_34_16 PM (2).png", targetH: 190 },
+  { key: "b3", file: "ChatGPT Image Jun 16, 2026, 10_34_17 PM (3).png", targetH: 200 },
+  { key: "b4", file: "ChatGPT Image Jun 16, 2026, 10_34_17 PM (4).png", targetH: 200 },
+  { key: "b5", file: "ChatGPT Image Jun 16, 2026, 10_34_18 PM (5).png", targetH: 200 },
+  { key: "b6", file: "ChatGPT Image Jun 16, 2026, 10_34_19 PM (6).png", targetH: 200 },
+  { key: "b7", file: "ChatGPT Image Jun 16, 2026, 10_34_20 PM (8).png", targetH: 200 },
+  { key: "b8", file: "ChatGPT Image Jun 16, 2026, 10_34_20 PM (9).png", targetH: 200 },
+  { key: "b9", file: "ChatGPT Image Jun 16, 2026, 10_34_21 PM (10).png", targetH: 200 },
+];
+
 const MAGENTA_TOL = 60; // distance threshold from pure magenta
 const DILATE = 7; // px to merge nearby sprite parts
 const MIN_W = 70;
@@ -253,6 +268,15 @@ function main() {
     const out = trimKeyScale(png, lm.targetH);
     fs.writeFileSync(path.join(BUILD_DIR, lm.key + ".png"), PNG.sync.write(out));
     console.log(`landmark ${lm.key.padEnd(11)} -> ${out.width}x${out.height}`);
+  }
+
+  for (const b of BUILDING_REFS) {
+    const p = path.join(BUILD_REF_SRC, b.file);
+    if (!fs.existsSync(p)) { console.warn("MISSING", p); continue; }
+    const png = PNG.sync.read(fs.readFileSync(p));
+    const out = trimKeyScale(png, b.targetH);
+    fs.writeFileSync(path.join(BUILD_DIR, b.key + ".png"), PNG.sync.write(out));
+    console.log(`building ${b.key.padEnd(11)} -> ${out.width}x${out.height}`);
   }
 
   console.log("\n--- sprites config ---");

@@ -134,6 +134,7 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
       setQuiz(null);
       setLineIndex(0);
       setDialog(p);
+      musicRef.current?.playSfx("talk");
     });
     const offNotify = gameBridge.on("notify", (n) => pushToast(n.kind, n.message));
     const offXp = gameBridge.on("xp:notify", (p) => {
@@ -141,11 +142,22 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
       window.setTimeout(() => setXp(null), 3200);
     });
     const offReady = gameBridge.on("game:ready", () => setShowIntro(true));
+    const offSfx = gameBridge.on("sfx", (s) => musicRef.current?.playSfx(s.name));
+    // fallback: also poll the registry flag (covers cases where the event fired
+    // before this listener attached, e.g. hot reloads)
+    const poll = window.setInterval(() => {
+      if (gameRef.current?.registry.get("worldReady")) {
+        setShowIntro(true);
+        window.clearInterval(poll);
+      }
+    }, 500);
     return () => {
       offDialog();
       offNotify();
       offXp();
       offReady();
+      offSfx();
+      window.clearInterval(poll);
     };
   }, [pushToast]);
 
@@ -278,6 +290,7 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
       pushToast("info", "Confirm the transaction in your wallet...");
       const hash = await game.completeQuest(quizZone.id, score, languageUsed);
       pushToast("success", "Quest recorded on Ritual Testnet!");
+      musicRef.current?.playSfx("success");
       setXp({ amount: score, reason: quizZone.name });
       window.setTimeout(() => setXp(null), 3200);
       gameBridge.emit("tx:result", { zoneId: quizZone.id, kind: "quest", ok: true, message: "recorded", txHash: hash });
@@ -370,8 +383,8 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
             <div className="cg-intro-title">CONSTUAL WORLD</div>
             <p className="cg-intro-sub">A tiny pixel town for learning health, the fun way.</p>
             <ul className="cg-intro-list">
-              <li><b>Move</b> — WASD / Arrow keys, or the joystick on mobile</li>
-              <li><b>Talk</b> — walk up to a character with a <span className="cg-key">!</span> and press <span className="cg-key">E</span> (or the Talk button)</li>
+              <li><b>Move</b> — WASD / Arrow keys, or just tap/click where you want to go</li>
+              <li><b>Talk</b> — tap a character (or walk up and press <span className="cg-key">E</span>) — look for the <span className="cg-key">!</span></li>
               <li><b>Learn &amp; earn</b> — 5 teachers give quizzes; pass them to record quests on Ritual Testnet</li>
               <li><b>Tip</b> — connect your wallet &amp; create a Passport to save progress on-chain</li>
             </ul>

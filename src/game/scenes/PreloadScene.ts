@@ -62,6 +62,8 @@ export default class PreloadScene extends Phaser.Scene {
 
     // the ritual flag is already transparent (keyed at build time)
     this.load.image("lm_flag", "/buildings/ritualflag.png");
+    // pixel-art reference buildings (transparent)
+    for (let i = 1; i <= 9; i++) this.load.image(`b${i}`, `/buildings/b${i}.png`);
   }
 
   create(): void {

@@ -46,6 +46,21 @@ export class MusicSystem {
     }
   }
 
+  /** Short UI sound effects (tap to move, etc.). */
+  playSfx(name: string): void {
+    if (!this.ctx || !this.master) return;
+    const now = this.ctx.currentTime;
+    if (name === "tap") {
+      this.tone(720, now, 0.07, "square", 0.16);
+      this.tone(1080, now + 0.035, 0.09, "square", 0.13);
+    } else if (name === "talk") {
+      this.tone(520, now, 0.06, "triangle", 0.18);
+      this.tone(780, now + 0.05, 0.08, "triangle", 0.15);
+    } else if (name === "success") {
+      [523, 659, 784, 1047].forEach((f, i) => this.tone(f, now + i * 0.07, 0.12, "square", 0.16));
+    }
+  }
+
   setMuted(muted: boolean): void {
     this.muted = muted;
     if (this.master && this.ctx) {
