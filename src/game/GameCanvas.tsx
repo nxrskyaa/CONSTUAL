@@ -32,6 +32,7 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
   const [result, setResult] = useState<ResultState>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [xp, setXp] = useState<XpPayload | null>(null);
+  const [displayedText, setDisplayedText] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ displayName: "", constualUsername: "", xUsername: "", preferredLanguage: 1 });
 
@@ -49,7 +50,9 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
       parent: containerRef.current,
       backgroundColor: "#0c1022",
       pixelArt: true,
-      scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH, width: "100%", height: "100%" },
+      width: window.innerWidth,
+      height: window.innerHeight,
+      scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
       physics: { default: "arcade", arcade: { gravity: { x: 0, y: 0 }, debug: false } },
       scene: [PreloadScene, MainWorldScene],
     });
@@ -130,6 +133,23 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
   const dialogLines = dialog?.lines ?? [];
   const isLastLine = lineIndex >= dialogLines.length - 1;
   const hasQuiz = dialog?.zoneId != null;
+  const currentLine = dialogLines[lineIndex] ?? "";
+
+  // typewriter effect for the current dialog line
+  useEffect(() => {
+    if (!dialog) {
+      setDisplayedText("");
+      return;
+    }
+    setDisplayedText("");
+    let i = 0;
+    const id = window.setInterval(() => {
+      i += 1;
+      setDisplayedText(currentLine.slice(0, i));
+      if (i >= currentLine.length) window.clearInterval(id);
+    }, 22);
+    return () => window.clearInterval(id);
+  }, [dialog, lineIndex, currentLine]);
 
   const closeDialog = useCallback(() => {
     setDialog(null);
@@ -224,6 +244,8 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
   }, [form, game, pushToast]);
 
   const shortAddr = account ? `${account.slice(0, 6)}…${account.slice(-4)}` : null;
+  const xpNum = profile ? Number(profile.xp) : 0;
+  const badgeNum = profile ? Number(profile.badgeCount) : 0;
 
   return (
     <div className="cg-root">
@@ -237,23 +259,27 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
         <div className="cg-wallet">
           {!isConnected ? (
             <button className="cg-btn cg-btn-primary" type="button" onClick={connect}>
-              Connect Wallet
+              ◈ CONNECT WALLET
             </button>
           ) : !isCorrectChain ? (
             <button className="cg-btn cg-btn-warn" type="button" onClick={switchNetwork}>
-              Switch to Ritual
+              SWITCH TO RITUAL
             </button>
           ) : (
-            <>
-              {!profileCreated && (
-                <button className="cg-btn cg-btn-blue" type="button" onClick={() => setShowCreate(true)}>
-                  Create Passport
-                </button>
-              )}
-              <button className="cg-btn cg-btn-ghost" type="button" onClick={() => disconnect()}>
-                {shortAddr}
+            <div className="cg-wallet-stack">
+              <button className="cg-chip" type="button" onClick={() => disconnect()}>
+                ◈ {shortAddr}
               </button>
-            </>
+              <div className="cg-stats">
+                <span className="cg-stat-xp">⚡ {xpNum} XP</span>
+                <span className="cg-stat-badge">🏅 {badgeNum}</span>
+                {!profileCreated && (
+                  <button className="cg-mini" type="button" onClick={() => setShowCreate(true)}>
+                    + PASSPORT
+                  </button>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -274,9 +300,12 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
           </div>
           <div className="cg-dialog-body">
             <div className="cg-speaker">{dialog.npcName}</div>
-            <div className="cg-dialog-text">{dialogLines[lineIndex]}</div>
+            <div className="cg-dialog-text">
+              {displayedText}
+              <span className="cg-caret">▼</span>
+            </div>
             <div className="cg-dialog-actions">
-              <span className="cg-dots">{lineIndex + 1} / {dialogLines.length} ▼</span>
+              <span className="cg-dots">{lineIndex + 1} / {dialogLines.length}</span>
               <div className="cg-actions-right">
                 <button className="cg-btn cg-btn-ghost" type="button" onClick={closeDialog}>Close</button>
                 {!isLastLine ? (

@@ -55,10 +55,10 @@ export const zones: Zone[] = [
     name: "Hydration & Dehydration",
     nameId: "Hidrasi & Dehidrasi",
     npcKey: "siggy_anime",
-    npcName: "Mizu",
+    npcName: "Siggy Anime Girl",
     description: "Why your body needs water, early dehydration signs, and the danger signs.",
     npcDialog: [
-      "Hi! I'm Mizu. Your body is about 60% water — every cell depends on it.",
+      "Hi! I'm Siggy Anime Girl. I'll teach you about hydration and how to keep your body healthy!",
       "Water powers your focus, digestion, temperature control, and keeps your blood flowing.",
       "Early dehydration is sneaky: thirst, dark yellow urine, dry lips, tiredness, and headache.",
       "On hot days, or with fever, vomiting, or diarrhea, you lose fluids much faster.",

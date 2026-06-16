@@ -65,7 +65,7 @@ export default class PreloadScene extends Phaser.Scene {
     for (const s of ALL_SPRITES) {
       const rawKey = `${s.key}__raw`;
       const source = this.textures.get(rawKey).getSourceImage() as HTMLImageElement;
-      const keyed = chromaKeyToCanvas(source, 60);
+      const keyed = chromaKeyToCanvas(source);
 
       // register transparent spritesheet under the clean key
       if (this.textures.exists(s.key)) this.textures.remove(s.key);

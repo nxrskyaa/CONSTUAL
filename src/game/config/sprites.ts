@@ -45,9 +45,10 @@ export const SPRITES: Record<string, CharSprite> = {
     frameHeight: FH,
     frameCount: 6,
     anims: [
-      { name: "idle", frames: [0, 4], frameRate: 1.6, repeat: -1 },
-      { name: "walk", frames: [0, 1, 2, 1], frameRate: 8, repeat: -1 },
-      { name: "run", frames: [1, 2, 3], frameRate: 14, repeat: -1 },
+      // single idle frame so the cat doesn't appear to change size between poses
+      { name: "idle", frames: [0], frameRate: 1, repeat: -1 },
+      { name: "walk", frames: [1, 2, 3], frameRate: 8, repeat: -1 },
+      { name: "run", frames: [1, 2, 3], frameRate: 13, repeat: -1 },
       { name: "interact", frames: [5], frameRate: 6, repeat: 0 },
       { name: "celebrate", frames: [4, 5], frameRate: 6, repeat: 3 },
       { name: "sit", frames: [0], frameRate: 1, repeat: 0 },

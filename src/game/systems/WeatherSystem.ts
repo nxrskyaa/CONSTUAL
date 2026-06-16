@@ -22,7 +22,6 @@ export class WeatherSystem {
   private scene: Phaser.Scene;
   private tint!: Phaser.GameObjects.Rectangle;
   private fog!: Phaser.GameObjects.Rectangle;
-  private clouds: Phaser.GameObjects.Image[] = [];
   private rain!: Phaser.GameObjects.Particles.ParticleEmitter;
   private dust!: Phaser.GameObjects.Particles.ParticleEmitter;
   private fireflies: Phaser.GameObjects.Image[] = [];
@@ -47,25 +46,14 @@ export class WeatherSystem {
       .rectangle(0, 0, w, h, 0xffffff, 0)
       .setOrigin(0)
       .setScrollFactor(0)
-      .setDepth(1250);
+      .setDepth(5100);
 
     // fog overlay
     this.fog = this.scene.add
       .rectangle(0, 0, w, h, 0xeef3ff, 0)
       .setOrigin(0)
       .setScrollFactor(0)
-      .setDepth(1255);
-
-    // drifting clouds
-    for (let i = 0; i < 5; i++) {
-      const c = this.scene.add
-        .image(Phaser.Math.Between(0, w), Phaser.Math.Between(20, h * 0.45), "fx_cloud")
-        .setScrollFactor(0)
-        .setDepth(1200)
-        .setAlpha(0)
-        .setScale(Phaser.Math.FloatBetween(0.7, 1.4));
-      this.clouds.push(c);
-    }
+      .setDepth(5150);
 
     // rain (off until set)
     this.rain = this.scene.add
@@ -83,7 +71,7 @@ export class WeatherSystem {
         blendMode: Phaser.BlendModes.NORMAL,
       })
       .setScrollFactor(0)
-      .setDepth(1260);
+      .setDepth(5200);
     this.rain.stop();
 
     // subtle always-on dust motes
@@ -101,14 +89,14 @@ export class WeatherSystem {
         tint: 0xfff4c2,
       })
       .setScrollFactor(0)
-      .setDepth(1180);
+      .setDepth(5050);
 
     // fireflies (shown at night)
     for (let i = 0; i < 12; i++) {
       const f = this.scene.add
         .image(Phaser.Math.Between(0, w), Phaser.Math.Between(h * 0.3, h), "fx_soft")
         .setScrollFactor(0)
-        .setDepth(1210)
+        .setDepth(5120)
         .setScale(0.5)
         .setTint(0xfff07a)
         .setAlpha(0);
@@ -191,10 +179,6 @@ export class WeatherSystem {
 
     // fog
     this.scene.tweens.add({ targets: this.fog, alpha: w === "foggy" ? 0.3 : 0, duration: d });
-
-    // clouds
-    const cloudAlpha = w === "cloudy" || w === "rainy" || w === "foggy" ? 0.75 : 0.25;
-    this.clouds.forEach((c) => this.scene.tweens.add({ targets: c, alpha: cloudAlpha, duration: d }));
   }
 
   nextWeather(): void {
@@ -244,12 +228,6 @@ export class WeatherSystem {
     if (this.phaseTimer >= 120000) {
       this.phaseTimer = 0;
       this.nextPhase();
-    }
-    // drift clouds
-    const w = this.scene.scale.width;
-    for (const c of this.clouds) {
-      c.x += (delta / 1000) * 12;
-      if (c.x - c.displayWidth / 2 > w) c.x = -c.displayWidth / 2;
     }
   }
 
