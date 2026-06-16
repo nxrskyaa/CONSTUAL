@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { animKey, PLAYER_KEY } from "../config/sprites";
+import { PLAYER_KEY } from "../config/sprites";
 import { NPCS, npcDialogLines, type NpcDef } from "../data/npcs";
 import { zones } from "../data/zones";
 import { gameBridge, type HudPayload, type WalletState } from "../bridge";
@@ -33,7 +33,11 @@ interface Npc {
 }
 
 export default class MainWorldScene extends Phaser.Scene {
-  private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
+  private player!: Phaser.GameObjects.Container;
+  private playerBody!: Phaser.Physics.Arcade.Body;
+  private playerVisual!: Phaser.GameObjects.Sprite;
+  private playerBob!: Phaser.Tweens.Tween;
+  private bobOn = false;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
   private keyShift!: Phaser.Input.Keyboard.Key;
@@ -170,22 +174,38 @@ export default class MainWorldScene extends Phaser.Scene {
     g.generateTexture("water_tile", ts, ts);
     g.clear();
 
-    // trees
-    g.fillStyle(0x000000, 0.18).fillEllipse(28, 60, 40, 12);
-    this.rect(g, 0x7a4a25, 24, 40, 8, 20);
-    g.fillStyle(0x1f6b39, 1).fillCircle(28, 30, 22);
-    g.fillStyle(0x2f8f4d, 1).fillCircle(20, 24, 14);
-    g.fillStyle(0x3aa85b, 1).fillCircle(34, 22, 12);
-    g.fillStyle(0x57c878, 0.9).fillCircle(26, 18, 7);
-    g.generateTexture("tree", 56, 68);
+    // retro round tree — chunky blocky canopy with a dark outline
+    g.fillStyle(0x000000, 0.22).fillEllipse(28, 66, 38, 10);
+    this.rect(g, 0x2a1a0d, 23, 44, 12, 22); // trunk outline
+    this.rect(g, 0x7a4a25, 25, 46, 8, 18);
+    this.rect(g, 0x95612f, 26, 47, 2, 16);
+    g.fillStyle(0x123a1c, 1); // canopy dark outline mass
+    g.fillRect(8, 12, 40, 30).fillRect(12, 6, 32, 42).fillRect(4, 18, 48, 16);
+    g.fillStyle(0x2f8f4d, 1); // canopy fill
+    g.fillRect(10, 14, 36, 26).fillRect(14, 8, 28, 38).fillRect(6, 20, 44, 12);
+    g.fillStyle(0x247a3e, 1); // shading
+    g.fillRect(28, 28, 18, 12).fillRect(34, 18, 10, 14);
+    g.fillStyle(0x57c878, 1); // highlights
+    g.fillRect(14, 12, 10, 8).fillRect(12, 20, 6, 6);
+    g.fillStyle(0x86e6a0, 1).fillRect(15, 13, 5, 4);
+    g.fillStyle(0x1c6a39, 1).fillRect(24, 22, 4, 4).fillRect(32, 30, 4, 4); // leaf gaps
+    g.generateTexture("tree", 56, 72);
     g.clear();
 
-    g.fillStyle(0x000000, 0.18).fillEllipse(22, 56, 32, 10);
-    this.rect(g, 0x6b4220, 18, 40, 8, 16);
-    g.fillStyle(0x1c6a46, 1).fillTriangle(22, 4, 4, 34, 40, 34);
-    g.fillStyle(0x2a8a5c, 1).fillTriangle(22, 14, 8, 40, 36, 40);
-    g.fillStyle(0x46b074, 0.9).fillTriangle(22, 24, 12, 46, 32, 46);
-    g.generateTexture("tree2", 44, 60);
+    // retro pine — stepped tiers with dark outline + snow pixels
+    g.fillStyle(0x000000, 0.22).fillEllipse(24, 64, 30, 9);
+    this.rect(g, 0x2a1a0d, 19, 46, 10, 16);
+    this.rect(g, 0x6b4220, 21, 48, 6, 12);
+    g.fillStyle(0x0f3a22, 1).fillRect(4, 34, 40, 12);
+    g.fillStyle(0x2a8a5c, 1).fillRect(6, 36, 36, 8);
+    g.fillStyle(0x0f3a22, 1).fillRect(8, 22, 32, 12);
+    g.fillStyle(0x2f9a64, 1).fillRect(10, 24, 28, 8);
+    g.fillStyle(0x0f3a22, 1).fillRect(13, 10, 22, 12);
+    g.fillStyle(0x36ab70, 1).fillRect(15, 12, 18, 8);
+    g.fillStyle(0x0f3a22, 1).fillRect(20, 4, 8, 8);
+    g.fillStyle(0x36ab70, 1).fillRect(22, 6, 4, 4);
+    g.fillStyle(0xbfe9cf, 1).fillRect(10, 36, 4, 2).fillRect(16, 24, 4, 2).fillRect(21, 12, 4, 2);
+    g.generateTexture("tree2", 48, 68);
     g.clear();
 
     g.fillStyle(0x3f9657, 1).fillTriangle(3, 16, 1, 4, 6, 0);
@@ -446,12 +466,30 @@ export default class MainWorldScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- player
   private spawnPlayer(): void {
-    this.player = this.physics.add.sprite(25 * TILE_SIZE, 20 * TILE_SIZE, PLAYER_KEY, 0);
-    this.player.setScale(PLAYER_SCALE); // set ONCE
-    this.player.setCollideWorldBounds(true);
-    this.player.body.setSize(110, 70);
-    this.player.body.setOffset(55, 140);
-    this.player.play(animKey(PLAYER_KEY, "idle"));
+    // A single consistent frame inside a container; the container carries the
+    // physics body so the visual never rescales (no "size glitch") and we can
+    // bob the visual independently for a smooth walk.
+    const visual = this.add.sprite(0, 0, PLAYER_KEY, 1).setOrigin(0.5, 0.82).setScale(PLAYER_SCALE);
+    this.playerVisual = visual;
+
+    const c = this.add.container(25 * TILE_SIZE, 20 * TILE_SIZE, [visual]);
+    this.physics.world.enable(c);
+    const body = c.body as Phaser.Physics.Arcade.Body;
+    body.setSize(30, 18);
+    body.setOffset(-15, -2);
+    body.setCollideWorldBounds(true);
+    this.player = c;
+    this.playerBody = body;
+
+    this.playerBob = this.tweens.add({
+      targets: visual,
+      y: -6,
+      duration: 220,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+      paused: true,
+    });
   }
 
   // ---------------------------------------------------------------- npcs
@@ -459,21 +497,9 @@ export default class MainWorldScene extends Phaser.Scene {
     for (const def of NPCS) {
       const x = def.tileX * TILE_SIZE + TILE_SIZE / 2;
       const y = def.tileY * TILE_SIZE + TILE_SIZE;
+      // single consistent frame; life comes from wandering, not frame swaps
       const sprite = this.physics.add.staticSprite(x, y, def.spriteKey, 0).setScale(NPC_SCALE).setOrigin(0.5, 0.85);
-      sprite.play(animKey(def.spriteKey, "idle"));
-      sprite.setInteractive({ useHandCursor: true });
-      sprite.on("pointerdown", () => this.interactWith(def));
-
-      // gentle staggered idle bob
-      this.tweens.add({
-        targets: sprite,
-        y: y - 4,
-        duration: Phaser.Math.Between(900, 1300),
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-        delay: Phaser.Math.Between(0, 600),
-      });
+      sprite.setFrame(0);
 
       const tag = this.add
         .text(x, y - CHAR_PX, def.name, {
@@ -490,6 +516,15 @@ export default class MainWorldScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setVisible(false);
 
+      const npc: Npc = { def, sprite, tag, bubble };
+      this.npcs.push(npc);
+
+      sprite.setInteractive({ useHandCursor: true });
+      sprite.on("pointerdown", () => this.interactWith(npc));
+
+      // roam around home so NPCs actually change position
+      if (def.wander) this.scheduleWander(npc, x, y);
+
       // occasional music note via timer (not in update)
       this.time.addEvent({
         delay: Phaser.Math.Between(6000, 12000),
@@ -503,9 +538,28 @@ export default class MainWorldScene extends Phaser.Scene {
           this.tweens.add({ targets: note, y: note.y - 26, alpha: 0, duration: 1600, onComplete: () => note.destroy() });
         },
       });
-
-      this.npcs.push({ def, sprite, tag, bubble });
     }
+  }
+
+  // NPCs stroll to random nearby points (with pauses) so the world feels alive.
+  private scheduleWander(npc: Npc, homeX: number, homeY: number): void {
+    const radius = 60;
+    const step = () => {
+      if (!npc.sprite.active) return;
+      const tx = Phaser.Math.Clamp(homeX + Phaser.Math.Between(-radius, radius), TILE_SIZE, WORLD_W - TILE_SIZE);
+      const ty = Phaser.Math.Clamp(homeY + Phaser.Math.Between(-radius, radius), TILE_SIZE, WORLD_H - TILE_SIZE);
+      npc.sprite.setFlipX(tx < npc.sprite.x);
+      const dist = Phaser.Math.Distance.Between(npc.sprite.x, npc.sprite.y, tx, ty);
+      this.tweens.add({
+        targets: npc.sprite,
+        x: tx,
+        y: ty,
+        duration: Math.max(700, dist * 16),
+        ease: "Sine.easeInOut",
+        onComplete: () => this.time.delayedCall(Phaser.Math.Between(700, 2600), step),
+      });
+    };
+    this.time.delayedCall(Phaser.Math.Between(300, 2200), step);
   }
 
   private markZoneComplete(zoneId: number): void {
@@ -643,31 +697,33 @@ export default class MainWorldScene extends Phaser.Scene {
   // ---------------------------------------------------------------- interact
   private tryInteract(): void {
     if (this.interactLocked) return;
-    let nearest: NpcDef | null = null;
+    let nearest: Npc | null = null;
     let best = INTERACT_RANGE;
     for (const n of this.npcs) {
       const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, n.sprite.x, n.sprite.y);
       if (d < best) {
         best = d;
-        nearest = n.def;
+        nearest = n;
       }
     }
     if (nearest) this.interactWith(nearest);
   }
 
-  private interactWith(def: NpcDef): void {
+  private interactWith(npc: Npc): void {
     if (this.interactLocked) return;
-    const nx = def.tileX * TILE_SIZE + TILE_SIZE / 2;
-    const ny = def.tileY * TILE_SIZE + TILE_SIZE;
-    if (Phaser.Math.Distance.Between(this.player.x, this.player.y, nx, ny) > INTERACT_RANGE * 2) return;
+    if (Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.sprite.x, npc.sprite.y) > INTERACT_RANGE * 1.8) return;
     this.interactLocked = true;
-    this.player.setVelocity(0, 0);
-    this.player.anims.play(animKey(PLAYER_KEY, "idle"), true);
+    this.playerBody.setVelocity(0, 0);
+    if (this.bobOn) {
+      this.playerBob.pause();
+      this.playerVisual.y = 0;
+      this.bobOn = false;
+    }
     gameBridge.emit("dialog:show", {
-      zoneId: def.zoneId,
-      npcKey: def.key,
-      npcName: def.name,
-      lines: npcDialogLines(def),
+      zoneId: npc.def.zoneId,
+      npcKey: npc.def.key,
+      npcName: npc.def.name,
+      lines: npcDialogLines(npc.def),
     });
   }
 
@@ -681,8 +737,8 @@ export default class MainWorldScene extends Phaser.Scene {
     this.drawMinimap();
     this.updateNpcs();
 
-    if (!this.player?.body) return;
-    const body = this.player.body;
+    if (!this.playerBody) return;
+    const body = this.playerBody;
     body.setVelocity(0);
 
     if (this.interactLocked) {
@@ -713,16 +769,18 @@ export default class MainWorldScene extends Phaser.Scene {
     body.setVelocity(vx, vy);
 
     const moving = vx !== 0 || vy !== 0;
-    const joyMag = Math.hypot(this.joystick.dx, this.joystick.dy);
-    const running = this.keyShift.isDown || joyMag > 0.85;
-
     if (moving) {
       if (vx < -1) this.facing = -1;
       else if (vx > 1) this.facing = 1;
-      this.player.setFlipX(this.facing === -1);
-      this.player.anims.play(animKey(PLAYER_KEY, running ? "run" : "walk"), true);
-    } else {
-      this.player.anims.play(animKey(PLAYER_KEY, "idle"), true);
+      this.playerVisual.setFlipX(this.facing === -1);
+      if (!this.bobOn) {
+        this.playerBob.resume();
+        this.bobOn = true;
+      }
+    } else if (this.bobOn) {
+      this.playerBob.pause();
+      this.playerVisual.y = 0;
+      this.bobOn = false;
     }
 
     this.player.setDepth(this.player.y);

@@ -42,23 +42,30 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
     window.setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4200);
   }, []);
 
-  // create the Phaser game once
+  // Create the Phaser game once. Creation is deferred via setTimeout so React
+  // StrictMode's mount→unmount→mount probe cancels the throwaway instance in
+  // cleanup before it's ever created — guaranteeing a single WebGL context.
   useEffect(() => {
-    if (!containerRef.current || gameRef.current) return;
-    const phaserGame = new Phaser.Game({
-      type: Phaser.AUTO,
-      parent: containerRef.current,
-      backgroundColor: "#0c1022",
-      pixelArt: true,
-      width: window.innerWidth,
-      height: window.innerHeight,
-      scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
-      physics: { default: "arcade", arcade: { gravity: { x: 0, y: 0 }, debug: false } },
-      scene: [PreloadScene, MainWorldScene],
-    });
-    gameRef.current = phaserGame;
+    let phaserGame: Phaser.Game | null = null;
+    const id = window.setTimeout(() => {
+      if (!containerRef.current || gameRef.current) return;
+      phaserGame = new Phaser.Game({
+        type: Phaser.AUTO,
+        parent: containerRef.current,
+        backgroundColor: "#0c1022",
+        pixelArt: true,
+        width: window.innerWidth,
+        height: window.innerHeight,
+        scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
+        render: { preserveDrawingBuffer: true },
+        physics: { default: "arcade", arcade: { gravity: { x: 0, y: 0 }, debug: false } },
+        scene: [PreloadScene, MainWorldScene],
+      });
+      gameRef.current = phaserGame;
+    }, 0);
     return () => {
-      phaserGame.destroy(true);
+      window.clearTimeout(id);
+      phaserGame?.destroy(true);
       gameRef.current = null;
     };
   }, []);
