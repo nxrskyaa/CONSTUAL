@@ -2883,3 +2883,115 @@ p {
     width: min(100% - 20px, 1240px);
   }
 }
+
+/* ============================================================
+   RETRO PIXEL-ART SKIN (override layer)
+   Pixel fonts + hard edges + flat "pixel" shadows. Layout and
+   content are untouched — this only restyles the surface so the
+   site reads as 8-bit/arcade instead of generic SaaS.
+   ============================================================ */
+:root {
+  --pixel: "Press Start 2P", monospace;
+  --retro: "Pixelify Sans", ui-monospace, monospace;
+  --pix-shadow: 4px 4px 0 rgba(33, 33, 29, 0.22);
+  --pix-shadow-sm: 3px 3px 0 rgba(33, 33, 29, 0.2);
+  --pix-border: 2px solid #21211d;
+}
+
+/* readable pixel font everywhere (replaces the generic sans) */
+body,
+.site,
+input,
+select,
+textarea,
+button {
+  font-family: var(--retro) !important;
+}
+.site p,
+.site li,
+.site a,
+.site label,
+.site small {
+  letter-spacing: 0.2px;
+}
+.site h1,
+.site h2,
+.site h3,
+.site h4 {
+  font-family: var(--retro) !important;
+  letter-spacing: 0.5px;
+  text-shadow: 2px 2px 0 rgba(33, 33, 29, 0.12);
+}
+
+/* tiny accents in a true 8-bit face */
+.eyebrow,
+.pill,
+.wallet-network,
+.nav-pill button,
+.bottom-nav span,
+.status-row small {
+  font-family: var(--pixel) !important;
+  letter-spacing: 0 !important;
+  text-transform: uppercase;
+}
+.eyebrow {
+  font-size: 0.58rem !important;
+  line-height: 1.7;
+}
+.nav-pill button {
+  font-size: 0.55rem !important;
+}
+.bottom-nav span {
+  font-size: 0.5rem !important;
+}
+
+/* chunky outlined cards with a flat offset shadow */
+.card,
+.feature-card,
+.module-card,
+.dark-card,
+.web3-overview,
+.step-card,
+.stat,
+.safety-band,
+.network-gate,
+.wallet-menu {
+  border-radius: 8px !important;
+  border: var(--pix-border) !important;
+  box-shadow: var(--pix-shadow) !important;
+}
+
+/* arcade buttons + pills: hard edges, press-down feedback */
+.btn,
+.wallet-connect,
+.wallet-pill,
+.nav-pill,
+.wallet-network,
+.wallet-menu button {
+  border-radius: 8px !important;
+}
+.btn {
+  border: var(--pix-border) !important;
+  box-shadow: var(--pix-shadow-sm) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 700;
+}
+.btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 rgba(33, 33, 29, 0.2) !important;
+}
+.wallet-connect,
+.wallet-pill {
+  border: var(--pix-border) !important;
+  box-shadow: var(--pix-shadow-sm) !important;
+}
+.wallet-dot {
+  border-radius: 0 !important;
+  box-shadow: 0 0 0 3px rgba(214, 254, 161, 0.7) !important;
+}
+
+/* crisp pixel scaling for raster art */
+.site img {
+  image-rendering: pixelated;
+}

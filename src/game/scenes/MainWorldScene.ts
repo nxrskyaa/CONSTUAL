@@ -5,7 +5,7 @@ import { zones } from "../data/zones";
 import { gameBridge, type HudPayload, type WalletState } from "../bridge";
 import { WeatherSystem } from "../systems/WeatherSystem";
 import { CloudSystem } from "../systems/CloudSystem";
-import { createBuildings } from "../objects/Buildings";
+import { createBuilding, type BuildingType } from "../objects/Buildings";
 import { TILE_SIZE } from "./PreloadScene";
 
 const MAP_W = 50;
@@ -44,6 +44,7 @@ export default class MainWorldScene extends Phaser.Scene {
   private keyE!: Phaser.Input.Keyboard.Key;
   private npcs: Npc[] = [];
   private solids!: Phaser.Physics.Arcade.StaticGroup;
+  private blocked: Phaser.Geom.Rectangle[] = []; // world AABBs NPC wander must avoid
   private weather!: WeatherSystem;
   private clouds!: CloudSystem;
   private leafEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -390,10 +391,11 @@ export default class MainWorldScene extends Phaser.Scene {
     ];
     for (const [rx, ry] of rimSpots) this.add.image(rx, ry, "rock").setOrigin(0.5, 1).setDepth(ry);
 
-    // block walking onto the water
+    // block walking onto the water (player physics + NPC wander avoidance)
     const block = this.add.rectangle(cx, cy, pw - 8, ph - 8).setVisible(false);
     this.physics.add.existing(block, true);
     this.solids.add(block);
+    this.blocked.push(new Phaser.Geom.Rectangle(px - 14, py - 14, pw + 28, ph + 28));
   }
 
   private createWaterSparkles(): void {
@@ -454,6 +456,13 @@ export default class MainWorldScene extends Phaser.Scene {
     const r = this.add.rectangle(x, y, w, h).setVisible(false);
     this.physics.add.existing(r, true);
     this.solids.add(r);
+    // record a slightly padded AABB so wandering NPCs steer clear of it
+    this.blocked.push(new Phaser.Geom.Rectangle(x - w / 2 - 14, y - h / 2 - 14, w + 28, h + 28));
+  }
+
+  private isBlocked(x: number, y: number): boolean {
+    for (const r of this.blocked) if (r.contains(x, y)) return true;
+    return false;
   }
 
   private buildScenery(): void {
@@ -511,12 +520,15 @@ export default class MainWorldScene extends Phaser.Scene {
     decor("lamp", 10);
     decor("bench", 8);
 
-    // mini chili garden at the bottom of the world
-    this.addSolidImage(22 * ts, 36 * ts, "chili_garden", 1, 0.85, 0.5);
+    // mini chili garden in the desert zone, next to Asceno
+    const cgx = 38 * ts;
+    const cgy = 17 * ts;
+    this.addSolidImage(cgx, cgy, "chili_garden", 1, 0.85, 0.5);
+    this.blocked.push(new Phaser.Geom.Rectangle(cgx - 86, cgy - 124, 172, 134));
     this.add
-      .text(22 * ts, 36 * ts - 116, "Chili Garden", { fontFamily: "monospace", fontSize: "9px", color: "#fff0a8", fontStyle: "bold" })
+      .text(cgx, cgy - 128, "Chili Garden", { fontFamily: "monospace", fontSize: "9px", color: "#fff0a8", fontStyle: "bold" })
       .setOrigin(0.5)
-      .setDepth(36 * ts + 1);
+      .setDepth(cgy + 1);
 
     for (let i = 0; i < 50; i++) {
       const tx = Phaser.Math.Between(2, MAP_W - 2);
@@ -528,8 +540,24 @@ export default class MainWorldScene extends Phaser.Scene {
   }
 
   private spawnBuildings(): void {
-    const buildings = createBuildings(this);
-    for (const b of buildings) {
+    const ts = TILE_SIZE;
+    // tidy, tile-aligned layout: HQ centered in the plaza; each zone gets a
+    // couple of buildings; the mystic (purple) zone is filled out more.
+    const layout: [BuildingType, number, number][] = [
+      ["hq", 25, 13], // dead-center top of plaza
+      ["clinic", 9, 9], // forest
+      ["house", 16, 8], // forest
+      ["lab", 41, 9], // desert
+      ["house", 34, 8], // desert
+      ["market", 9, 33], // coast
+      ["house", 16, 34], // coast
+      ["temple", 40, 30], // mystic
+      ["crystal", 32, 32], // mystic
+      ["house", 44, 35], // mystic
+      ["crystal", 38, 36], // mystic
+    ];
+    for (const [type, tx, ty] of layout) {
+      const b = createBuilding(this, type, tx * ts, ty * ts);
       const cw = (b.getData("collW") as number) ?? 80;
       const ch = (b.getData("collH") as number) ?? 24;
       this.addStaticCollider(b.x, b.y - ch / 2, cw, ch);
@@ -572,6 +600,8 @@ export default class MainWorldScene extends Phaser.Scene {
     // gentle wind: subtle horizontal "wave" + slight sway
     this.tweens.add({ targets: flag, scaleX: { from: 0.7, to: 0.64 }, duration: 820, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     this.tweens.add({ targets: flag, angle: { from: -1.6, to: 1.6 }, duration: 1500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    // collider at the base so player & NPCs don't clip through the pole
+    this.addStaticCollider(fx, fy - 8, 26, 16);
   }
 
   // ---------------------------------------------------------------- npcs
@@ -623,25 +653,36 @@ export default class MainWorldScene extends Phaser.Scene {
     }
   }
 
-  // NPCs alternate between strolling to a nearby point and pausing to "look
-  // around" (a quick facing flip), so motion feels varied rather than templated.
+  // Each NPC gets a little "personality" so the crowd doesn't move in lockstep:
+  // a homebody mostly idles, a wanderer roams wide, a pacer takes short hops.
   private scheduleWander(npc: Npc, homeX: number, homeY: number): void {
-    const radius = 64;
+    const persona = Phaser.Math.RND.pick(["homebody", "wanderer", "pacer"] as const);
+    const radius = persona === "wanderer" ? 110 : persona === "pacer" ? 40 : 70;
+    const idleChance = persona === "homebody" ? 0.6 : persona === "pacer" ? 0.25 : 0.3;
+    const speed = persona === "pacer" ? 11 : Phaser.Math.Between(13, 22); // ms per px
+
+    const idle = (min: number, max: number) => this.time.delayedCall(Phaser.Math.Between(min, max), step);
     const step = () => {
       if (!npc.container.active) return;
-      const roll = Phaser.Math.FloatBetween(0, 1);
-      if (roll < 0.35) {
-        // pause and glance the other way
-        npc.visual.setFlipX(!npc.visual.flipX);
-        this.time.delayedCall(Phaser.Math.Between(900, 2200), step);
+      // sometimes just pause and glance around (varied dwell time)
+      if (Phaser.Math.FloatBetween(0, 1) < idleChance) {
+        if (Phaser.Math.FloatBetween(0, 1) < 0.5) npc.visual.setFlipX(!npc.visual.flipX);
+        idle(700, 3200);
         return;
       }
-      const tx = Phaser.Math.Clamp(homeX + Phaser.Math.Between(-radius, radius), TILE_SIZE, WORLD_W - TILE_SIZE);
-      const ty = Phaser.Math.Clamp(homeY + Phaser.Math.Between(-radius, radius), TILE_SIZE, WORLD_H - TILE_SIZE);
-      // never stroll into the pond — just pause and try again later
-      if (this.inPondWorld(tx, ty)) {
-        npc.visual.setFlipX(!npc.visual.flipX);
-        this.time.delayedCall(Phaser.Math.Between(900, 2000), step);
+      // try a few candidate targets; skip any that land on a blocked area
+      let tx = 0;
+      let ty = 0;
+      let ok = false;
+      for (let i = 0; i < 6 && !ok; i++) {
+        const ang = Phaser.Math.FloatBetween(0, Math.PI * 2);
+        const r = Phaser.Math.Between(20, radius);
+        tx = Phaser.Math.Clamp(homeX + Math.cos(ang) * r, TILE_SIZE, WORLD_W - TILE_SIZE);
+        ty = Phaser.Math.Clamp(homeY + Math.sin(ang) * r, TILE_SIZE, WORLD_H - TILE_SIZE);
+        ok = !this.isBlocked(tx, ty);
+      }
+      if (!ok) {
+        idle(700, 1800);
         return;
       }
       npc.visual.setFlipX(tx < npc.container.x);
@@ -650,12 +691,12 @@ export default class MainWorldScene extends Phaser.Scene {
         targets: npc.container,
         x: tx,
         y: ty,
-        duration: Math.max(650, dist * 15),
-        ease: "Sine.easeInOut",
-        onComplete: () => this.time.delayedCall(Phaser.Math.Between(600, 2400), step),
+        duration: Math.max(550, dist * speed),
+        ease: Phaser.Math.RND.pick(["Sine.easeInOut", "Quad.easeInOut", "Linear"]),
+        onComplete: () => idle(500, 2800),
       });
     };
-    this.time.delayedCall(Phaser.Math.Between(300, 2400), step);
+    this.time.delayedCall(Phaser.Math.Between(200, 2600), step);
   }
 
   private markZoneComplete(zoneId: number): void {

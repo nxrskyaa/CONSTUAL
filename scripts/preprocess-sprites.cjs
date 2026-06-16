@@ -44,6 +44,12 @@ const CHARACTERS = [
   { key: "tutubear", file: "tutubear.png", frames: 4 },
   { key: "john", file: "john.png", frames: 4 },
   { key: "yourinuu", file: "yourinuu.png", frames: 4 },
+  { key: "linhlambo", file: "Linhlambo.png", frames: 4 },
+  { key: "agata", file: "agata.png", frames: 4 },
+  { key: "whuan", file: "Whuan.png", frames: 4 },
+  { key: "kippo", file: "Kippo.G.png", frames: 4 },
+  { key: "hytamm", file: "Hytamm.png", frames: 4 },
+  { key: "shin", file: "Shin.png", frames: 4 },
 ];
 
 // Single-image landmark buildings + flag -> transparent trimmed PNGs.
