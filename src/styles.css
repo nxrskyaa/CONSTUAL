@@ -3122,11 +3122,54 @@ html[data-theme="dark"] body::before {
   border: var(--pix-border);
   border-radius: 8px;
   background: var(--color-soft);
-  color: var(--color-charcoal);
+  color: var(--color-lime);
   box-shadow: var(--pix-shadow-sm);
-  font-size: 1.1rem;
   cursor: pointer;
+  transition: transform 0.1s ease, background 0.2s ease;
+}
+.theme-toggle:hover {
+  background: rgba(200, 241, 105, 0.16);
 }
 .theme-toggle:active {
   transform: translate(1px, 1px);
+}
+/* the navbar is a dark arcade bar in both themes, so the toggle is always dark */
+.navbar .theme-toggle {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(200, 241, 105, 0.5);
+  color: var(--color-lime);
+}
+
+/* ============================================================
+   DARK MODE TEXT FIXES — components that hard-code white/navy as a
+   text colour turn unreadable when those tokens flip. Force readable
+   colours on the affected text in dark mode only.
+   ============================================================ */
+html[data-theme="dark"] .site .eyebrow {
+  color: #8fe0b4 !important;
+}
+html[data-theme="dark"] .site h1,
+html[data-theme="dark"] .site h2,
+html[data-theme="dark"] .site h3,
+html[data-theme="dark"] .site h4,
+html[data-theme="dark"] .site .hero-subtitle,
+html[data-theme="dark"] .site .btn-ghost-light,
+html[data-theme="dark"] .site .dark-card,
+html[data-theme="dark"] .site .dark-card p,
+html[data-theme="dark"] .site .dark-card span,
+html[data-theme="dark"] .site .dark-card h2,
+html[data-theme="dark"] .site .dark-card h3,
+html[data-theme="dark"] .site .dark-card .eyebrow {
+  color: var(--color-charcoal) !important;
+}
+/* bold text should follow its (now light) parent, not a hard-coded dark colour */
+html[data-theme="dark"] .site strong {
+  color: inherit !important;
+}
+/* hero phone mock-up + floating cards sit on dark surfaces in dark mode */
+html[data-theme="dark"] .site .phone-mock,
+html[data-theme="dark"] .site .phone-mock *,
+html[data-theme="dark"] .site .floating-health-card,
+html[data-theme="dark"] .site .floating-health-card * {
+  color: var(--color-charcoal) !important;
 }
