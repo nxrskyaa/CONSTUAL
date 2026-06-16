@@ -25,12 +25,12 @@ export interface NpcDef {
 }
 
 export const NPCS: NpcDef[] = [
-  // --- Quest givers (zones 1-5) ---
-  { key: "seesac", name: "Seesac", spriteKey: "seesac", area: "forest", tileX: 9, tileY: 7, wander: true, zoneId: 1, accent: 0xff8db0 },
-  { key: "siggy_anime", name: "Mizu", spriteKey: "siggy_anime", area: "coast", tileX: 9, tileY: 22, wander: true, zoneId: 2, accent: 0x6ee7ff },
-  { key: "rikky", name: "Rikky", spriteKey: "rikky", area: "forest", tileX: 15, tileY: 11, wander: true, zoneId: 3, accent: 0xc8f169 },
-  { key: "rizan", name: "Rizan", spriteKey: "rizan", area: "mystic", tileX: 30, tileY: 23, wander: true, zoneId: 4, accent: 0xc792ff },
-  { key: "jez", name: "Dr. Jez", spriteKey: "jez", area: "forest", tileX: 16, tileY: 6, wander: true, zoneId: 5, accent: 0x7ee0a0 },
+  // --- Quest givers (zones 1-5) --- positions are tiles on the 50x40 map
+  { key: "seesac", name: "Seesac", spriteKey: "seesac", area: "forest", tileX: 14, tileY: 9, wander: false, zoneId: 1, accent: 0xff8db0 },
+  { key: "siggy_anime", name: "Siggy Anime Girl", spriteKey: "siggy_anime", area: "coast", tileX: 11, tileY: 30, wander: false, zoneId: 2, accent: 0x6ee7ff },
+  { key: "rikky", name: "Rikky", spriteKey: "rikky", area: "forest", tileX: 19, tileY: 15, wander: false, zoneId: 3, accent: 0xc8f169 },
+  { key: "rizan", name: "Rizan", spriteKey: "rizan", area: "mystic", tileX: 34, tileY: 28, wander: false, zoneId: 4, accent: 0xc792ff },
+  { key: "jez", name: "Dr. Jez", spriteKey: "jez", area: "forest", tileX: 7, tileY: 16, wander: false, zoneId: 5, accent: 0x7ee0a0 },
 
   // --- Dialog-only characters ---
   {
@@ -72,8 +72,8 @@ export const NPCS: NpcDef[] = [
     name: "NXR",
     spriteKey: "nxr",
     area: "plaza",
-    tileX: 20,
-    tileY: 14,
+    tileX: 30,
+    tileY: 20,
     wander: false,
     zoneId: null,
     accent: 0xc8f169,
