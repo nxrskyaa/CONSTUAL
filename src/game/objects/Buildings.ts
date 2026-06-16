@@ -21,9 +21,16 @@ export function createBuildings(scene: Phaser.Scene): Phaser.GameObjects.Contain
     for (const ry of [-85, -55, -25]) for (const rx of [-45, -10, 25]) g.fillRect(rx, ry, 20, 16);
     g.fillStyle(0x00cc66, 1).fillRect(-15, -40, 30, 40);
     g.fillStyle(0x002211, 1).fillRect(-50, -72, 100, 18);
+    // retro outlines + window frames
+    g.lineStyle(2, 0x05060f, 1);
+    g.strokeRect(-60, -100, 120, 100);
+    g.strokeRect(-65, -115, 130, 20);
+    g.strokeRect(-15, -40, 30, 40);
+    g.strokeRect(-50, -72, 100, 18);
+    for (const ry of [-85, -55, -25]) for (const rx of [-45, -10, 25]) g.strokeRect(rx, ry, 20, 16);
     const sign = scene.add.text(0, -63, "CONSTUAL", { fontSize: "8px", color: "#00ff88", fontFamily: PIXEL_FONT }).setOrigin(0.5);
     hq.add([g, sign]);
-    hq.setData("collW", 120).setData("collH", 34);
+    hq.setData("collW", 118).setData("collH", 96);
     scene.tweens.add({ targets: g, alpha: { from: 0.9, to: 1 }, duration: 1500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     buildings.push(hq);
   }
@@ -37,8 +44,13 @@ export function createBuildings(scene: Phaser.Scene): Phaser.GameObjects.Contain
     g.fillStyle(0xff3333, 1).fillRect(-8, -70, 16, 44).fillRect(-22, -54, 44, 16);
     g.fillStyle(0x55aaaa, 1).fillRect(-15, -36, 30, 36);
     g.fillStyle(0xaaddee, 1).fillRect(-42, -68, 18, 14).fillRect(24, -68, 18, 14);
+    g.lineStyle(2, 0x123a38, 1);
+    g.strokeRect(-50, -80, 100, 80);
+    g.strokeRect(-55, -92, 110, 16);
+    g.strokeRect(-15, -36, 30, 36);
+    g.strokeRect(-42, -68, 18, 14).strokeRect(24, -68, 18, 14);
     c.add(g);
-    c.setData("collW", 100).setData("collH", 30);
+    c.setData("collW", 100).setData("collH", 76);
     buildings.push(c);
   }
 
@@ -51,11 +63,14 @@ export function createBuildings(scene: Phaser.Scene): Phaser.GameObjects.Contain
     g.fillStyle(0x9933ff, 0.8).fillRect(-40, -60, 22, 18).fillRect(18, -60, 22, 18).fillRect(-40, -30, 22, 18).fillRect(18, -30, 22, 18);
     g.lineStyle(3, 0xaa44ff, 1).lineBetween(0, -90, 0, -115);
     g.fillStyle(0x6622cc, 1).fillRect(-14, -38, 28, 38);
+    g.lineStyle(2, 0x05060f, 1);
+    g.strokeRect(-14, -38, 28, 38);
+    g.strokeRect(-40, -60, 22, 18).strokeRect(18, -60, 22, 18).strokeRect(-40, -30, 22, 18).strokeRect(18, -30, 22, 18);
     const beacon = scene.add.graphics();
     beacon.fillStyle(0xff44ff, 1).fillCircle(0, -117, 5);
     const sign = scene.add.text(0, -80, "WEB3 LAB", { fontSize: "6px", color: "#cc88ff", fontFamily: PIXEL_FONT }).setOrigin(0.5);
     lab.add([g, beacon, sign]);
-    lab.setData("collW", 110).setData("collH", 30);
+    lab.setData("collW", 110).setData("collH", 86);
     scene.tweens.add({ targets: beacon, alpha: { from: 0.5, to: 1 }, duration: 800, yoyo: true, repeat: -1 });
     buildings.push(lab);
   }
@@ -68,11 +83,14 @@ export function createBuildings(scene: Phaser.Scene): Phaser.GameObjects.Contain
     g.fillStyle(0x887799, 1).fillRect(-75, 0, 150, 8);
     g.fillStyle(0xbbaacc, 1).fillRect(-60, -80, 18, 80).fillRect(-20, -80, 18, 80).fillRect(20, -80, 18, 80).fillRect(42, -80, 18, 80);
     g.fillStyle(0x554466, 1).fillTriangle(-75, -80, 0, -130, 75, -80).fillRect(-60, -85, 120, 10);
+    g.lineStyle(2, 0x1c1430, 1);
+    g.strokeRect(-60, -80, 18, 80).strokeRect(-20, -80, 18, 80).strokeRect(20, -80, 18, 80).strokeRect(42, -80, 18, 80);
+    g.strokeRect(-60, -85, 120, 10);
     const orb = scene.add.graphics();
     orb.fillStyle(0xdd99ff, 0.8).fillCircle(0, -55, 12);
     orb.fillStyle(0xaa44dd, 1).fillCircle(0, -55, 7);
     t.add([g, orb]);
-    t.setData("collW", 150).setData("collH", 26);
+    t.setData("collW", 132).setData("collH", 78);
     scene.tweens.add({ targets: orb, alpha: { from: 0.55, to: 1 }, scale: { from: 0.9, to: 1.1 }, duration: 2000, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     buildings.push(t);
   }
@@ -87,9 +105,12 @@ export function createBuildings(scene: Phaser.Scene): Phaser.GameObjects.Contain
     }
     g.lineStyle(2, 0x884400, 1).strokeRect(-60, -82, 120, 22);
     g.fillStyle(0xffddaa, 1).fillRect(-45, -50, 90, 30);
+    g.lineStyle(2, 0x3a1d00, 1);
+    g.strokeRect(-55, -65, 110, 65);
+    g.strokeRect(-45, -50, 90, 30);
     const sign = scene.add.text(0, -76, "NUTRITION", { fontSize: "6px", color: "#442200", fontFamily: PIXEL_FONT }).setOrigin(0.5);
     m.add([g, sign]);
-    m.setData("collW", 110).setData("collH", 24);
+    m.setData("collW", 110).setData("collH", 62);
     buildings.push(m);
   }
 

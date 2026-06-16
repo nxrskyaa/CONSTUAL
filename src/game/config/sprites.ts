@@ -27,13 +27,12 @@ export interface CharSprite {
 const FW = 220;
 const FH = 220;
 
-// Standard idle/talk cycle for a 4-frame NPC strip.
-function npcAnims(frameCount: number): AnimDef[] {
-  const f = (i: number) => Math.min(i, frameCount - 1);
-  return [
-    { name: "idle", frames: [f(0), f(1), f(0), f(2)], frameRate: 3, repeat: -1 },
-    { name: "talk", frames: [f(0), f(1), f(2), f(3)], frameRate: 6, repeat: -1 },
-  ];
+// The source art is a set of varied poses (different sizes/positions within
+// each 220px frame), so cycling frames makes a character appear to grow/shrink.
+// We therefore keep every character on a single consistent frame and convey
+// life through movement (player bob, NPC wander) instead of frame swaps.
+function npcAnims(): AnimDef[] {
+  return [{ name: "idle", frames: [0], frameRate: 1, repeat: -1 }];
 }
 
 export const SPRITES: Record<string, CharSprite> = {
@@ -54,15 +53,15 @@ export const SPRITES: Record<string, CharSprite> = {
       { name: "sit", frames: [0], frameRate: 1, repeat: 0 },
     ],
   },
-  seesac: { key: "seesac", file: "characters/seesac.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims(4) },
-  siggy_anime: { key: "siggy_anime", file: "characters/siggy_anime.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims(4) },
-  decka: { key: "decka", file: "characters/decka.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims(4) },
-  nxr: { key: "nxr", file: "characters/nxr.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims(4) },
-  rikky: { key: "rikky", file: "characters/rikky.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims(4) },
-  rizan: { key: "rizan", file: "characters/rizan.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims(4) },
-  jez: { key: "jez", file: "characters/jez.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims(4) },
-  stefan: { key: "stefan", file: "characters/stefan.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims(4) },
-  josh: { key: "josh", file: "characters/josh.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims(4) },
+  seesac: { key: "seesac", file: "characters/seesac.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  siggy_anime: { key: "siggy_anime", file: "characters/siggy_anime.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  decka: { key: "decka", file: "characters/decka.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  nxr: { key: "nxr", file: "characters/nxr.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  rikky: { key: "rikky", file: "characters/rikky.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  rizan: { key: "rizan", file: "characters/rizan.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  jez: { key: "jez", file: "characters/jez.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  stefan: { key: "stefan", file: "characters/stefan.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  josh: { key: "josh", file: "characters/josh.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
 };
 
 export const ALL_SPRITES: CharSprite[] = Object.values(SPRITES);
