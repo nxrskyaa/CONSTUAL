@@ -65,6 +65,10 @@ export const SPRITES: Record<string, CharSprite> = {
   evo: { key: "evo", file: "characters/evo.png", frameWidth: FW, frameHeight: FH, frameCount: 6, anims: npcAnims() },
   asceno: { key: "asceno", file: "characters/asceno.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   jepanya: { key: "jepanya", file: "characters/jepanya.png", frameWidth: FW, frameHeight: FH, frameCount: 6, anims: npcAnims() },
+  mexxy: { key: "mexxy", file: "characters/mexxy.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  tutubear: { key: "tutubear", file: "characters/tutubear.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  john: { key: "john", file: "characters/john.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  yourinuu: { key: "yourinuu", file: "characters/yourinuu.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
 };
 
 export const ALL_SPRITES: CharSprite[] = Object.values(SPRITES);

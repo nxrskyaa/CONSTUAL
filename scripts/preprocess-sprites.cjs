@@ -40,13 +40,15 @@ const CHARACTERS = [
   { key: "evo", file: "Evo.png", frames: 6 },
   { key: "asceno", file: "asceno.png", frames: 4 },
   { key: "jepanya", file: "jepanya.png", frames: 6 },
+  { key: "mexxy", file: "Mexxy.png", frames: 4 },
+  { key: "tutubear", file: "tutubear.png", frames: 4 },
+  { key: "john", file: "john.png", frames: 4 },
+  { key: "yourinuu", file: "yourinuu.png", frames: 4 },
 ];
 
 // Single-image landmark buildings + flag -> transparent trimmed PNGs.
 const BUILD_DIR = path.join(__dirname, "..", "public", "buildings");
 const LANDMARKS = [
-  { key: "balinese", file: "Balinese.png", targetH: 340 },
-  { key: "gwk", file: "GWK.png", targetH: 320 },
   { key: "ritualflag", file: "ritualflag.png", targetH: 150 },
 ];
 const BUILD_SRC = "D:/building";

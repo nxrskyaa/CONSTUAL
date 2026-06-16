@@ -246,6 +246,43 @@ export default class MainWorldScene extends Phaser.Scene {
     g.generateTexture("sign", 40, 42);
     g.clear();
 
+    // extra flower colours for a livelier world
+    this.rect(g, 0x3f9657, 7, 10, 2, 6);
+    g.fillStyle(0x8a6cff, 1).fillCircle(8, 7, 5);
+    g.fillStyle(0xffe05a, 1).fillCircle(8, 7, 2);
+    g.generateTexture("flower2", 16, 18);
+    g.clear();
+    this.rect(g, 0x3f9657, 7, 10, 2, 6);
+    g.fillStyle(0xff5d6c, 1).fillCircle(8, 7, 5);
+    g.fillStyle(0xfff0a8, 1).fillCircle(8, 7, 2);
+    g.generateTexture("flower3", 16, 18);
+    g.clear();
+
+    // mini chili garden (retro plot, inspired by the reference)
+    g.fillStyle(0x6b4a2a, 1).fillRect(8, 26, 134, 88);
+    g.fillStyle(0x4e3520, 1);
+    for (let i = 0; i < 4; i++) g.fillRect(14, 34 + i * 19, 122, 3);
+    g.lineStyle(3, 0x352213, 1).strokeRect(8, 26, 134, 88);
+    g.fillStyle(0xb8854a, 1).fillRect(8, 22, 134, 5);
+    g.fillStyle(0x9c6b3a, 1);
+    for (let x = 8; x <= 142; x += 22) g.fillRect(x - 2, 16, 5, 14);
+    const plant = (px: number, py: number) => {
+      g.fillStyle(0x1c6a39, 1).fillRect(px - 8, py - 13, 16, 13);
+      g.fillStyle(0x2f8f4d, 1).fillRect(px - 6, py - 15, 12, 9);
+      g.fillStyle(0x3aa85b, 1).fillRect(px - 4, py - 16, 6, 4);
+      g.fillStyle(0xff3b30, 1).fillRect(px - 6, py - 3, 3, 8).fillRect(px + 3, py - 4, 3, 8);
+      g.fillStyle(0xc41e16, 1).fillRect(px - 6, py + 4, 3, 2).fillRect(px + 3, py + 3, 3, 2);
+    };
+    plant(40, 74);
+    plant(82, 90);
+    plant(116, 70);
+    plant(62, 108);
+    g.fillStyle(0x2f8f4d, 1).fillRect(126, 92, 3, 18);
+    g.fillStyle(0xffd23f, 1).fillCircle(128, 90, 7);
+    g.fillStyle(0x7a4a25, 1).fillCircle(128, 90, 3);
+    g.generateTexture("chili_garden", 152, 120);
+    g.clear();
+
     // green-themed joystick + interact button
     g.fillStyle(0x000000, 0.3).fillCircle(60, 60, 56);
     g.lineStyle(3, 0x00ff88, 0.5).strokeCircle(60, 60, 56);
@@ -287,6 +324,16 @@ export default class MainWorldScene extends Phaser.Scene {
 
   private inPond(tx: number, ty: number): boolean {
     return tx >= POND.tx && tx < POND.tx + POND.tw && ty >= POND.ty && ty < POND.ty + POND.th;
+  }
+
+  // pond bounds in world px (with a margin) so NPCs never wander into the water
+  private inPondWorld(x: number, y: number): boolean {
+    const px = POND.tx * TILE_SIZE;
+    const py = POND.ty * TILE_SIZE;
+    const pw = POND.tw * TILE_SIZE;
+    const ph = POND.th * TILE_SIZE;
+    const m = 18;
+    return x > px - m && x < px + pw + m && y > py - m && y < py + ph + m;
   }
 
   private buildMap(): void {
@@ -457,10 +504,19 @@ export default class MainWorldScene extends Phaser.Scene {
         img.setDepth(ty * ts);
       }
     };
-    decor("flower", 60);
+    decor("flower", 90);
+    decor("flower2", 70);
+    decor("flower3", 60);
     decor("rock", 18);
     decor("lamp", 10);
     decor("bench", 8);
+
+    // mini chili garden at the bottom of the world
+    this.addSolidImage(22 * ts, 36 * ts, "chili_garden", 1, 0.85, 0.5);
+    this.add
+      .text(22 * ts, 36 * ts - 116, "Chili Garden", { fontFamily: "monospace", fontSize: "9px", color: "#fff0a8", fontStyle: "bold" })
+      .setOrigin(0.5)
+      .setDepth(36 * ts + 1);
 
     for (let i = 0; i < 50; i++) {
       const tx = Phaser.Math.Between(2, MAP_W - 2);
@@ -506,12 +562,9 @@ export default class MainWorldScene extends Phaser.Scene {
     this.playerBody = body;
   }
 
-  // GWK statue, Balinese temple, and the waving Ritual flag at the world center.
+  // Waving Ritual flag at the world center.
   private spawnLandmarks(): void {
     const ts = TILE_SIZE;
-    this.addLandmark(42 * ts, 33 * ts, "lm_gwk", 0.6, 96, 30);
-    this.addLandmark(6 * ts, 9 * ts, "lm_balinese", 0.52, 96, 28);
-
     const fx = 25 * ts;
     const fy = 20 * ts;
     const flag = this.add.image(fx, fy, "lm_flag").setOrigin(0.5, 1).setScale(0.7);
@@ -519,12 +572,6 @@ export default class MainWorldScene extends Phaser.Scene {
     // gentle wind: subtle horizontal "wave" + slight sway
     this.tweens.add({ targets: flag, scaleX: { from: 0.7, to: 0.64 }, duration: 820, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     this.tweens.add({ targets: flag, angle: { from: -1.6, to: 1.6 }, duration: 1500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-  }
-
-  private addLandmark(x: number, y: number, key: string, scale: number, collW: number, collH: number): void {
-    const img = this.add.image(x, y, key).setOrigin(0.5, 1).setScale(scale);
-    img.setDepth(y);
-    this.addStaticCollider(x, y - collH / 2, collW, collH);
   }
 
   // ---------------------------------------------------------------- npcs
@@ -591,6 +638,12 @@ export default class MainWorldScene extends Phaser.Scene {
       }
       const tx = Phaser.Math.Clamp(homeX + Phaser.Math.Between(-radius, radius), TILE_SIZE, WORLD_W - TILE_SIZE);
       const ty = Phaser.Math.Clamp(homeY + Phaser.Math.Between(-radius, radius), TILE_SIZE, WORLD_H - TILE_SIZE);
+      // never stroll into the pond — just pause and try again later
+      if (this.inPondWorld(tx, ty)) {
+        npc.visual.setFlipX(!npc.visual.flipX);
+        this.time.delayedCall(Phaser.Math.Between(900, 2000), step);
+        return;
+      }
       npc.visual.setFlipX(tx < npc.container.x);
       const dist = Phaser.Math.Distance.Between(npc.container.x, npc.container.y, tx, ty);
       this.tweens.add({
