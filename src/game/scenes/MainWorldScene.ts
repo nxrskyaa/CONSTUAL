@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { PLAYER_KEY } from "../config/sprites";
+import { animKey, PLAYER_KEY } from "../config/sprites";
 import { NPCS, npcDialogLines, type NpcDef } from "../data/npcs";
 import { zones } from "../data/zones";
 import { gameBridge, type HudPayload, type WalletState } from "../bridge";
@@ -119,6 +119,9 @@ export default class MainWorldScene extends Phaser.Scene {
 
     // keep camera + HUD correct on viewport resize
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
+
+    // tell React the world is built so it can show the intro guideline
+    gameBridge.emit("game:ready", undefined);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       offWallet();
@@ -577,7 +580,8 @@ export default class MainWorldScene extends Phaser.Scene {
     // Single consistent frame in a container; the container holds the physics
     // body so the visual never rescales. Idle/walk life comes from a smooth
     // sine bob applied to the visual in update() (pure position, no size change).
-    const visual = this.add.sprite(0, 0, PLAYER_KEY, 1).setOrigin(0.5, 0.82).setScale(PLAYER_SCALE);
+    const visual = this.add.sprite(0, 0, PLAYER_KEY, 5).setOrigin(0.5, 0.82).setScale(PLAYER_SCALE);
+    visual.play(animKey(PLAYER_KEY, "idle"));
     this.playerVisual = visual;
 
     const c = this.add.container(25 * TILE_SIZE, 24 * TILE_SIZE, [visual]);
@@ -766,10 +770,12 @@ export default class MainWorldScene extends Phaser.Scene {
     if (!this.joyBase) return;
     const h = this.scale.height;
     const w = this.scale.width;
-    this.joyBase.setPosition(96, h - 96);
-    if (!this.joystick.active) this.joyKnob?.setPosition(96, h - 96);
-    this.eBtn?.setPosition(w - 80, h - 96);
-    this.eLabel?.setPosition(w - 80, h - 96);
+    // keep clear of the bottom edge + mobile home indicator / safe area
+    const by = h - 124;
+    this.joyBase.setPosition(104, by);
+    if (!this.joystick.active) this.joyKnob?.setPosition(104, by);
+    this.eBtn?.setPosition(w - 92, by);
+    this.eLabel?.setPosition(w - 92, by);
   }
 
   // ---------------------------------------------------------------- HUD
@@ -905,11 +911,21 @@ export default class MainWorldScene extends Phaser.Scene {
     else if (moving && vx > 1) this.facing = 1;
     this.playerVisual.setFlipX(this.facing === -1);
 
-    // smooth sine bob — gentle when idle, bouncier when walking (no rescale)
     const t = this.time.now;
-    const amp = moving ? 5 : 2.2;
-    const spd = moving ? 0.013 : 0.005;
-    this.playerVisual.y = -Math.abs(Math.sin(t * spd)) * amp;
+    const running = this.keyShift.isDown;
+    if (moving) {
+      // play the 2-frame walk/run cycle + a springy hop & lean for juice
+      const key = animKey(PLAYER_KEY, running ? "run" : "walk");
+      if (this.playerVisual.anims.currentAnim?.key !== key) this.playerVisual.play(key, true);
+      const phase = Math.sin(t * (running ? 0.026 : 0.02));
+      this.playerVisual.y = -Math.abs(phase) * (running ? 7 : 5);
+      this.playerVisual.setRotation(phase * 0.06 * (this.facing === -1 ? -1 : 1));
+    } else {
+      const idle = animKey(PLAYER_KEY, "idle");
+      if (this.playerVisual.anims.currentAnim?.key !== idle) this.playerVisual.play(idle, true);
+      this.playerVisual.y = -Math.abs(Math.sin(t * 0.004)) * 1.6; // soft breathing
+      this.playerVisual.setRotation(0);
+    }
 
     this.player.setDepth(this.player.y);
 

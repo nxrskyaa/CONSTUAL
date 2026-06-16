@@ -37,6 +37,7 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
   const [xp, setXp] = useState<XpPayload | null>(null);
   const [displayedText, setDisplayedText] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
   const [form, setForm] = useState({ displayName: "", constualUsername: "", xUsername: "", preferredLanguage: 1 });
 
   const pushToast = useCallback((kind: Toast["kind"], message: string) => {
@@ -50,24 +51,35 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
   // cleanup before it's ever created — guaranteeing a single WebGL context.
   useEffect(() => {
     let phaserGame: Phaser.Game | null = null;
+    let ro: ResizeObserver | null = null;
     const id = window.setTimeout(() => {
-      if (!containerRef.current || gameRef.current) return;
+      const parent = containerRef.current;
+      if (!parent || gameRef.current) return;
+      // size to the actual container (100dvh) — not window.innerHeight, which on
+      // mobile includes the area under the browser chrome and crops the bottom
       phaserGame = new Phaser.Game({
         type: Phaser.AUTO,
-        parent: containerRef.current,
+        parent,
         backgroundColor: "#0c1022",
         pixelArt: true,
-        width: window.innerWidth,
-        height: window.innerHeight,
+        width: parent.clientWidth || window.innerWidth,
+        height: parent.clientHeight || window.innerHeight,
         scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
         render: { preserveDrawingBuffer: true },
         physics: { default: "arcade", arcade: { gravity: { x: 0, y: 0 }, debug: false } },
         scene: [PreloadScene, MainWorldScene],
       });
       gameRef.current = phaserGame;
+      // keep the canvas matched to the container as mobile chrome shows/hides
+      ro = new ResizeObserver(() => {
+        const g = gameRef.current;
+        if (g && parent.clientWidth && parent.clientHeight) g.scale.resize(parent.clientWidth, parent.clientHeight);
+      });
+      ro.observe(parent);
     }, 0);
     return () => {
       window.clearTimeout(id);
+      ro?.disconnect();
       phaserGame?.destroy(true);
       gameRef.current = null;
     };
@@ -128,10 +140,12 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
       setXp(p);
       window.setTimeout(() => setXp(null), 3200);
     });
+    const offReady = gameBridge.on("game:ready", () => setShowIntro(true));
     return () => {
       offDialog();
       offNotify();
       offXp();
+      offReady();
     };
   }, [pushToast]);
 
@@ -348,6 +362,25 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
           <div key={t.id} className={`cg-toast ${t.kind}`}>{t.message}</div>
         ))}
       </div>
+
+      {/* intro guideline — shown once the world has loaded */}
+      {showIntro && (
+        <div className="cg-overlay cg-intro">
+          <div className="cg-panel cg-intro-panel">
+            <div className="cg-intro-title">CONSTUAL WORLD</div>
+            <p className="cg-intro-sub">A tiny pixel town for learning health, the fun way.</p>
+            <ul className="cg-intro-list">
+              <li><b>Move</b> — WASD / Arrow keys, or the joystick on mobile</li>
+              <li><b>Talk</b> — walk up to a character with a <span className="cg-key">!</span> and press <span className="cg-key">E</span> (or the Talk button)</li>
+              <li><b>Learn &amp; earn</b> — 5 teachers give quizzes; pass them to record quests on Ritual Testnet</li>
+              <li><b>Tip</b> — connect your wallet &amp; create a Passport to save progress on-chain</li>
+            </ul>
+            <button className="cg-btn cg-btn-primary cg-intro-start" type="button" onClick={() => setShowIntro(false)}>
+              ▶ Start Exploring
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* RPG dialog */}
       {dialog && (
