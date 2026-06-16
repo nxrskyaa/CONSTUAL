@@ -60,9 +60,7 @@ export default class PreloadScene extends Phaser.Scene {
       this.load.image(`${s.key}__raw`, `/${s.file}`);
     }
 
-    // landmark images are already transparent (keyed at build time)
-    this.load.image("lm_gwk", "/buildings/gwk.png");
-    this.load.image("lm_balinese", "/buildings/balinese.png");
+    // the ritual flag is already transparent (keyed at build time)
     this.load.image("lm_flag", "/buildings/ritualflag.png");
   }
 
