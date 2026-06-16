@@ -5,7 +5,7 @@ import { zones } from "../data/zones";
 import { gameBridge, type HudPayload, type WalletState } from "../bridge";
 import { WeatherSystem } from "../systems/WeatherSystem";
 import { CloudSystem } from "../systems/CloudSystem";
-import { createBuilding, type BuildingType } from "../objects/Buildings";
+import { createBuilding } from "../objects/Buildings";
 import { TILE_SIZE } from "./PreloadScene";
 
 const MAP_W = 50;
@@ -52,12 +52,9 @@ export default class MainWorldScene extends Phaser.Scene {
   private interactLocked = false;
   private facing: 1 | -1 = 1;
 
-  // mobile joystick
-  private joystick = { active: false, dx: 0, dy: 0, baseX: 0, baseY: 0, pointerId: -1 };
-  private joyBase?: Phaser.GameObjects.Image;
-  private joyKnob?: Phaser.GameObjects.Image;
-  private eBtn?: Phaser.GameObjects.Image;
-  private eLabel?: Phaser.GameObjects.Text;
+  // tap / click-to-move
+  private moveTarget: { x: number; y: number } | null = null;
+  private tapInteractNpc: Npc | null = null;
 
   // HUD
   private hud = { address: null as string | null, xp: 0, badges: 0, completed: 0, total: zones.length };
@@ -95,7 +92,6 @@ export default class MainWorldScene extends Phaser.Scene {
     this.createLeaves();
     this.createWaterSparkles();
     this.setupInput();
-    this.createMobileControls();
     this.createHud();
 
     this.weather = new WeatherSystem(this);
@@ -121,6 +117,8 @@ export default class MainWorldScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
 
     // tell React the world is built so it can show the intro guideline
+    // (registry flag is the reliable signal; the event covers the fast path)
+    this.registry.set("worldReady", true);
     gameBridge.emit("game:ready", undefined);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -147,26 +145,46 @@ export default class MainWorldScene extends Phaser.Scene {
     const ts = TILE_SIZE;
     const g = this.make.graphics({ x: 0, y: 0 }, false);
 
-    const grass = (base: number, fleck: number, ix: number) => {
-      this.rect(g, base, ix * ts, 0, ts, ts);
-      this.rect(g, fleck, ix * ts + 5, 7, 3, 3);
-      this.rect(g, fleck, ix * ts + 20, 17, 3, 3);
-      this.rect(g, fleck, ix * ts + 12, 25, 3, 3);
+    // a richer ground tile: base + a subtle 2-tone dither + scattered flecks &
+    // highlight pixels so tiles read as textured pixel-art instead of flat blocks
+    const ground = (base: number, dark: number, fleck: number, hi: number, ix: number) => {
+      const ox = ix * ts;
+      this.rect(g, base, ox, 0, ts, ts);
+      // dither: a few darker 2px squares on a loose grid
+      for (let yy = 2; yy < ts; yy += 8) {
+        for (let xx = (yy % 16 === 2 ? 2 : 6); xx < ts; xx += 8) {
+          this.rect(g, dark, ox + xx, yy, 2, 2, 0.5);
+        }
+      }
+      // flecks (grass blades / specks)
+      this.rect(g, fleck, ox + 5, 7, 3, 3);
+      this.rect(g, fleck, ox + 20, 17, 3, 3);
+      this.rect(g, fleck, ox + 12, 25, 3, 3);
+      this.rect(g, fleck, ox + 26, 6, 2, 3);
+      // highlight pixels
+      this.rect(g, hi, ox + 9, 13, 2, 2, 0.8);
+      this.rect(g, hi, ox + 24, 22, 2, 2, 0.8);
     };
-    grass(0x2f7d46, 0x3f9657, T.GRASS);
-    grass(0x357f4c, 0x4aa05f, T.GRASS2);
+    ground(0x2f7d46, 0x276a3b, 0x3f9657, 0x5fb277, T.GRASS);
+    ground(0x357f4c, 0x2c6c41, 0x4aa05f, 0x66bd80, T.GRASS2);
+    // path: cobble-ish with dither + edge highlights
     this.rect(g, 0xc9a36a, T.PATH * ts, 0, ts, ts);
-    this.rect(g, 0xb88f57, T.PATH * ts + 6, 8, 4, 4);
-    this.rect(g, 0xb88f57, T.PATH * ts + 18, 20, 4, 4);
+    for (let yy = 3; yy < ts; yy += 7) for (let xx = (yy % 14 === 3 ? 3 : 8); xx < ts; xx += 9) this.rect(g, 0xb88f57, T.PATH * ts + xx, yy, 3, 3, 0.7);
+    this.rect(g, 0xddc08c, T.PATH * ts + 6, 4, 3, 2, 0.7);
+    this.rect(g, 0xddc08c, T.PATH * ts + 22, 24, 3, 2, 0.7);
     this.rect(g, 0x2b6cb0, T.WATER * ts, 0, ts, ts);
+    // sand
     this.rect(g, 0xe2c98a, T.SAND * ts, 0, ts, ts);
-    this.rect(g, 0xd2b774, T.SAND * ts + 8, 10, 4, 3);
-    this.rect(g, 0xd2b774, T.SAND * ts + 20, 22, 4, 3);
+    for (let yy = 4; yy < ts; yy += 9) for (let xx = (yy % 18 === 4 ? 4 : 10); xx < ts; xx += 10) this.rect(g, 0xd2b774, T.SAND * ts + xx, yy, 3, 2, 0.6);
+    this.rect(g, 0xf0dca6, T.SAND * ts + 8, 10, 3, 2, 0.7);
+    this.rect(g, 0xf0dca6, T.SAND * ts + 22, 22, 3, 2, 0.7);
+    // mystic
     this.rect(g, 0x4a3b78, T.MYSTIC * ts, 0, ts, ts);
-    this.rect(g, 0x5d4c92, T.MYSTIC * ts + 6, 9, 3, 3);
-    this.rect(g, 0x7a68b8, T.MYSTIC * ts + 21, 20, 3, 3);
-    grass(0x2f8f6a, 0x46a883, T.COAST);
-    grass(0x2f7d46, 0x3f9657, T.FLOWER);
+    for (let yy = 3; yy < ts; yy += 8) for (let xx = (yy % 16 === 3 ? 3 : 9); xx < ts; xx += 9) this.rect(g, 0x3c305f, T.MYSTIC * ts + xx, yy, 2, 2, 0.6);
+    this.rect(g, 0x6f5cae, T.MYSTIC * ts + 6, 9, 3, 3, 0.8);
+    this.rect(g, 0x8a78c8, T.MYSTIC * ts + 21, 20, 2, 2, 0.9);
+    ground(0x2f8f6a, 0x256f51, 0x46a883, 0x66c4a0, T.COAST);
+    ground(0x2f7d46, 0x276a3b, 0x3f9657, 0x5fb277, T.FLOWER);
     this.rect(g, 0xff7ab0, T.FLOWER * ts + 9, 9, 4, 4);
     this.rect(g, 0xffd23f, T.FLOWER * ts + 19, 19, 4, 4);
     g.generateTexture("worldtiles", ts * 8, ts);
@@ -544,27 +562,26 @@ export default class MainWorldScene extends Phaser.Scene {
 
   private spawnBuildings(): void {
     const ts = TILE_SIZE;
-    // tidy, tile-aligned layout: HQ centered in the plaza; each zone gets a
-    // couple of buildings; the mystic (purple) zone is filled out more.
-    const layout: [BuildingType, number, number][] = [
-      ["hq", 25, 13], // dead-center top of plaza
-      ["clinic", 9, 9], // forest
-      ["house", 16, 8], // forest
-      ["lab", 41, 9], // desert
-      ["house", 34, 8], // desert
-      ["market", 9, 33], // coast
-      ["house", 16, 34], // coast
-      ["temple", 40, 30], // mystic
-      ["crystal", 32, 32], // mystic
-      ["house", 44, 35], // mystic
-      ["crystal", 38, 36], // mystic
+    // Constual HQ stays hand-drawn (it's the brand landmark), dead-centered.
+    const hq = createBuilding(this, "hq", 25 * ts, 13 * ts);
+    this.addStaticCollider(hq.x, hq.y - 48, 118, 96);
+
+    // every other building uses the pixel-art reference art, placed per zone
+    const refs: [string, number, number][] = [
+      ["b3", 9, 9], ["b5", 16, 8], // forest
+      ["b2", 9, 33], ["b8", 17, 34], // coast
+      ["b1", 41, 9], ["b7", 34, 8], // desert
+      ["b4", 40, 30], ["b6", 32, 33], ["b9", 44, 35], // mystic
     ];
-    for (const [type, tx, ty] of layout) {
-      const b = createBuilding(this, type, tx * ts, ty * ts);
-      const cw = (b.getData("collW") as number) ?? 80;
-      const ch = (b.getData("collH") as number) ?? 24;
-      this.addStaticCollider(b.x, b.y - ch / 2, cw, ch);
-    }
+    for (const [key, tx, ty] of refs) this.addBuildingImage(tx * ts, ty * ts, key, 0.66);
+  }
+
+  private addBuildingImage(x: number, y: number, key: string, scale: number): void {
+    const img = this.add.image(x, y, key).setOrigin(0.5, 1).setScale(scale);
+    img.setDepth(y);
+    const w = img.displayWidth * 0.72;
+    const h = img.displayHeight * 0.42;
+    this.addStaticCollider(x, y - h / 2, w, h);
   }
 
   private addSign(x: number, y: number, label: string): void {
@@ -726,56 +743,48 @@ export default class MainWorldScene extends Phaser.Scene {
     this.keyShift = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
     this.keyE = kb.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.keyE.on("down", () => this.tryInteract());
-  }
 
-  private createMobileControls(): void {
-    // show on touch devices, or on narrow viewports (covers emulators/small screens)
-    if (!this.sys.game.device.input.touch && this.scale.width >= 820) return;
-    this.joyBase = this.add.image(0, 0, "joy_base").setScrollFactor(0).setDepth(6000).setAlpha(0.85);
-    this.joyKnob = this.add.image(0, 0, "joy_knob").setScrollFactor(0).setDepth(6001).setAlpha(0.95);
-    this.eBtn = this.add.image(0, 0, "btn_e").setScrollFactor(0).setDepth(6000).setInteractive({ useHandCursor: true });
-    this.eLabel = this.add.text(0, 0, "E", { fontFamily: '"Press Start 2P", monospace', fontSize: "16px", color: "#00ff88" }).setOrigin(0.5).setScrollFactor(0).setDepth(6002);
-    this.eBtn.on("pointerdown", () => this.tryInteract());
-    this.placeMobileControls();
-
+    // tap / click to walk there; tap a character to walk over and talk to them
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
-      if (this.joystick.pointerId !== -1 || !this.joyBase) return;
-      if (p.x < this.scale.width * 0.5 && p.y > this.scale.height * 0.4) {
-        this.joystick.pointerId = p.id;
-        this.joystick.active = true;
-        this.joystick.baseX = this.joyBase.x;
-        this.joystick.baseY = this.joyBase.y;
+      if (this.interactLocked) return;
+      // ignore taps on the fixed minimap (top-right) so it isn't a move target
+      if (p.y < 116 && p.x > this.scale.width - 150) return;
+      const wx = p.worldX;
+      const wy = p.worldY;
+      let near: Npc | null = null;
+      let best = 70;
+      for (const n of this.npcs) {
+        const d = Phaser.Math.Distance.Between(wx, wy, n.container.x, n.container.y);
+        if (d < best) {
+          best = d;
+          near = n;
+        }
       }
+      if (near) {
+        this.tapInteractNpc = near;
+        this.moveTarget = { x: near.container.x, y: near.container.y };
+      } else {
+        this.tapInteractNpc = null;
+        this.moveTarget = { x: wx, y: wy };
+        this.spawnTapMarker(wx, wy);
+      }
+      gameBridge.emit("sfx", { name: "tap" });
     });
-    this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
-      if (p.id !== this.joystick.pointerId || !this.joyKnob) return;
-      const dx = p.x - this.joystick.baseX;
-      const dy = p.y - this.joystick.baseY;
-      const dist = Math.min(Math.hypot(dx, dy), 44);
-      const ang = Math.atan2(dy, dx);
-      this.joyKnob.setPosition(this.joystick.baseX + Math.cos(ang) * dist, this.joystick.baseY + Math.sin(ang) * dist);
-      this.joystick.dx = (Math.cos(ang) * dist) / 44;
-      this.joystick.dy = (Math.sin(ang) * dist) / 44;
-    });
-    const release = (p: Phaser.Input.Pointer) => {
-      if (p.id !== this.joystick.pointerId) return;
-      this.joystick = { active: false, dx: 0, dy: 0, baseX: this.joystick.baseX, baseY: this.joystick.baseY, pointerId: -1 };
-      this.joyKnob?.setPosition(this.joyBase!.x, this.joyBase!.y);
-    };
-    this.input.on("pointerup", release);
-    this.input.on("pointerupoutside", release);
   }
 
-  private placeMobileControls(): void {
-    if (!this.joyBase) return;
-    const h = this.scale.height;
-    const w = this.scale.width;
-    // keep clear of the bottom edge + mobile home indicator / safe area
-    const by = h - 124;
-    this.joyBase.setPosition(104, by);
-    if (!this.joystick.active) this.joyKnob?.setPosition(104, by);
-    this.eBtn?.setPosition(w - 92, by);
-    this.eLabel?.setPosition(w - 92, by);
+  // little expanding ring where the player tapped
+  private spawnTapMarker(x: number, y: number): void {
+    const g = this.add.graphics().setDepth(y + 5);
+    g.lineStyle(3, 0x00ff88, 0.9).strokeCircle(0, 0, 7);
+    g.setPosition(x, y);
+    this.tweens.add({
+      targets: g,
+      scale: { from: 0.6, to: 2.4 },
+      alpha: { from: 0.9, to: 0 },
+      duration: 430,
+      ease: "Cubic.easeOut",
+      onComplete: () => g.destroy(),
+    });
   }
 
   // ---------------------------------------------------------------- HUD
@@ -809,7 +818,6 @@ export default class MainWorldScene extends Phaser.Scene {
   }
 
   private repositionUi(): void {
-    this.placeMobileControls();
     this.questText?.setPosition(12, 64);
   }
 
@@ -892,16 +900,32 @@ export default class MainWorldScene extends Phaser.Scene {
     if (this.cursors.up.isDown || this.wasd.W.isDown) vy = -speed;
     if (this.cursors.down.isDown || this.wasd.S.isDown) vy = speed;
 
-    if (this.joystick.active) {
-      vx += this.joystick.dx * speed;
-      vy += this.joystick.dy * speed;
-    }
-
-    // normalize diagonal
-    if (vx !== 0 && vy !== 0) {
-      const inv = 1 / Math.hypot(vx, vy);
-      vx = vx * inv * speed;
-      vy = vy * inv * speed;
+    const kbActive = vx !== 0 || vy !== 0;
+    if (kbActive) {
+      // keyboard cancels any tap-to-move target
+      this.moveTarget = null;
+      this.tapInteractNpc = null;
+      if (vx !== 0 && vy !== 0) {
+        const inv = 1 / Math.hypot(vx, vy);
+        vx = vx * inv * speed;
+        vy = vy * inv * speed;
+      }
+    } else if (this.moveTarget) {
+      const dx = this.moveTarget.x - this.player.x;
+      const dy = this.moveTarget.y - this.player.y;
+      const dist = Math.hypot(dx, dy);
+      const stopAt = this.tapInteractNpc ? 56 : 8;
+      if (dist > stopAt) {
+        vx = (dx / dist) * speed;
+        vy = (dy / dist) * speed;
+      } else {
+        this.moveTarget = null;
+        if (this.tapInteractNpc) {
+          const npc = this.tapInteractNpc;
+          this.tapInteractNpc = null;
+          this.interactWith(npc);
+        }
+      }
     }
 
     body.setVelocity(vx, vy);

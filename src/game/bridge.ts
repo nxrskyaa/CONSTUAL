@@ -59,6 +59,7 @@ export type GameEvents = {
 
   // Phaser -> React
   "game:ready": void;
+  sfx: { name: string };
   "dialog:show": DialogPayload;
   "dialog:hide": void;
   "quiz:show": QuizPayload;

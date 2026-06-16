@@ -3007,18 +3007,18 @@ button {
 html[data-theme="dark"] {
   --color-charcoal: #e9edf5;
   --color-ink: #f2f5fb;
-  --color-white: #0d0f17;
-  --color-soft: #161a26;
-  --color-navy: #070a13;
-  --color-muted: #95a1ba;
+  --color-white: #0b0f1c;
+  --color-soft: #151b2c;
+  --color-navy: #060912;
+  --color-muted: #97a3bc;
   --color-line: rgba(255, 255, 255, 0.14);
   --color-lime: #c8f169;
   --color-lime-soft: rgba(200, 241, 105, 0.14);
-  --shadow-soft: 0 24px 80px rgba(0, 0, 0, 0.55);
-  --shadow-card: 0 16px 42px rgba(0, 0, 0, 0.5);
-  --pix-ink: rgba(255, 255, 255, 0.26);
-  --pix-shadow-c: rgba(0, 0, 0, 0.55);
-  --pix-shadow-c-sm: rgba(0, 0, 0, 0.5);
+  --shadow-soft: 0 24px 80px rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 16px 42px rgba(0, 0, 0, 0.55);
+  --pix-ink: rgba(120, 230, 170, 0.4);
+  --pix-shadow-c: rgba(0, 0, 0, 0.6);
+  --pix-shadow-c-sm: rgba(0, 0, 0, 0.55);
   color: var(--color-charcoal);
   background: var(--color-white);
 }
@@ -3035,15 +3035,82 @@ html[data-theme="dark"] .nav-pill .active,
 html[data-theme="dark"] .nav-pill .active * {
   color: #14210a !important;
 }
-/* surfaces that were hard-white in light mode */
+/* every surface that was hard-coded white/near-white in light mode */
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .feature-card,
+html[data-theme="dark"] .module-card,
+html[data-theme="dark"] .phone-mock,
+html[data-theme="dark"] .floating-health-card,
+html[data-theme="dark"] .enter-band,
 html[data-theme="dark"] .wallet-pill,
 html[data-theme="dark"] .wallet-menu,
+html[data-theme="dark"] .mobile-menu,
 html[data-theme="dark"] .nav-pill,
+html[data-theme="dark"] .safety-band,
 html[data-theme="dark"] input,
 html[data-theme="dark"] select,
 html[data-theme="dark"] textarea {
-  background: var(--color-soft);
+  background: var(--color-soft) !important;
   color: var(--color-charcoal);
+}
+html[data-theme="dark"] .btn-glass {
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: var(--color-charcoal) !important;
+}
+html[data-theme="dark"] .mock-line,
+html[data-theme="dark"] .shine,
+html[data-theme="dark"] .leaflet {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+/* subtle arcade grid texture on the dark backdrop */
+html[data-theme="dark"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: linear-gradient(rgba(120, 230, 170, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 230, 170, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* ============================================================
+   ARCADE PIXEL NAVBAR (both themes) — solid bar, hard border,
+   pixel brand. Also fixes the white navbar that broke dark mode.
+   ============================================================ */
+.navbar {
+  background: #0f1424 !important;
+  border: var(--pix-border) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--pix-shadow) !important;
+  backdrop-filter: none !important;
+}
+.navbar .brand,
+.navbar .brand *,
+.navbar .nav-pill button,
+.navbar a {
+  color: #e9edf5;
+}
+.navbar .brand strong,
+.navbar .brand span {
+  font-family: var(--pixel) !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.5px;
+  color: var(--color-lime);
+}
+.navbar .nav-pill {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.navbar .nav-pill button {
+  color: #cfd6e6 !important;
+}
+.navbar .nav-pill button:hover {
+  background: rgba(200, 241, 105, 0.16) !important;
+}
+.navbar .nav-pill .active {
+  background: var(--color-lime) !important;
+  color: #14210a !important;
 }
 /* theme toggle button in the navbar */
 .theme-toggle {
