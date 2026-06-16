@@ -19,6 +19,7 @@ import {
   Menu,
   Moon,
   Network,
+  Sun,
   ShieldCheck,
   Trophy,
   UserRound,
@@ -1998,8 +1999,8 @@ function ThemeToggle() {
     }
   };
   return (
-    <button className="theme-toggle" onClick={toggle} type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
-      {dark ? "☀️" : "🌙"}
+    <button className="theme-toggle" onClick={toggle} type="button" aria-label="Toggle dark mode" title={dark ? "Switch to light mode" : "Switch to dark mode"}>
+      {dark ? <Sun size={18} /> : <Moon size={18} />}
     </button>
   );
 }
