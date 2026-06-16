@@ -69,6 +69,12 @@ export const SPRITES: Record<string, CharSprite> = {
   tutubear: { key: "tutubear", file: "characters/tutubear.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   john: { key: "john", file: "characters/john.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   yourinuu: { key: "yourinuu", file: "characters/yourinuu.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  linhlambo: { key: "linhlambo", file: "characters/linhlambo.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  agata: { key: "agata", file: "characters/agata.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  whuan: { key: "whuan", file: "characters/whuan.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  kippo: { key: "kippo", file: "characters/kippo.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  hytamm: { key: "hytamm", file: "characters/hytamm.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  shin: { key: "shin", file: "characters/shin.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
 };
 
 export const ALL_SPRITES: CharSprite[] = Object.values(SPRITES);

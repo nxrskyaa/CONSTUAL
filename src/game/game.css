@@ -17,19 +17,27 @@
   inset: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh; /* dynamic viewport: no jump under mobile browser chrome */
   margin: 0;
   padding: 0;
   overflow: hidden;
   background: #0c1022;
   font-family: var(--cg-body);
+  touch-action: none; /* joystick drags don't scroll/zoom the page */
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .cg-canvas {
   position: absolute;
   inset: 0;
+  touch-action: none;
 }
 .cg-canvas canvas {
   display: block;
+  touch-action: none;
 }
 
 /* top bar */

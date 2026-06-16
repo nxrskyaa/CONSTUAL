@@ -92,6 +92,21 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
     };
   }, []);
 
+  // lock page scroll while the full-screen game is mounted (mobile fix)
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prev = { htmlOverflow: html.style.overflow, bodyOverflow: body.style.overflow, bodyOverscroll: body.style.overscrollBehavior };
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    return () => {
+      html.style.overflow = prev.htmlOverflow;
+      body.style.overflow = prev.bodyOverflow;
+      body.style.overscrollBehavior = prev.bodyOverscroll;
+    };
+  }, []);
+
   const toggleMute = useCallback(() => {
     setMuted((prev) => {
       const next = !prev;

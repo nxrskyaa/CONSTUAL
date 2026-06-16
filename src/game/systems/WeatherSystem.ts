@@ -104,7 +104,7 @@ export class WeatherSystem {
       this.driftFirefly(f);
     }
 
-    this.weatherInterval = Phaser.Math.Between(180000, 300000); // 3-5 min
+    this.weatherInterval = Phaser.Math.Between(90000, 150000); // 3-5 min
     this.setWeather("clear", true);
     this.setPhase("noon", true);
 
@@ -220,12 +220,12 @@ export class WeatherSystem {
     this.weatherTimer += delta;
     if (this.weatherTimer >= this.weatherInterval) {
       this.weatherTimer = 0;
-      this.weatherInterval = Phaser.Math.Between(180000, 300000);
+      this.weatherInterval = Phaser.Math.Between(90000, 150000);
       this.nextWeather();
     }
     // time-of-day every 2 min (full day ~8 min)
     this.phaseTimer += delta;
-    if (this.phaseTimer >= 120000) {
+    if (this.phaseTimer >= 80000) {
       this.phaseTimer = 0;
       this.nextPhase();
     }
