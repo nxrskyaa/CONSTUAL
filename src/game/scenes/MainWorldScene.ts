@@ -89,9 +89,11 @@ export default class MainWorldScene extends Phaser.Scene {
     this.spawnNpcs();
     this.physics.add.collider(this.player, this.solids);
 
-    // camera: set zoom ONCE, smooth follow
+    // camera: set zoom ONCE, smooth follow. roundPixels avoids tile-seam
+    // tearing/shimmer while the camera pans (esp. on high-DPI mobile screens).
     this.cameras.main.setZoom(CAM_ZOOM);
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.setRoundPixels(true);
+    this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
 
     this.createLeaves();
     this.createWaterSparkles();
@@ -1227,8 +1229,8 @@ export default class MainWorldScene extends Phaser.Scene {
     // tap / click to walk there; tap a character to walk over and talk to them
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
       if (this.interactLocked) return;
-      // ignore taps on the fixed minimap (top-right) so it isn't a move target
-      if (p.y < 116 && p.x > this.scale.width - 150) return;
+      // ignore taps on the fixed minimap (now bottom-right) so it isn't a move target
+      if (p.x > this.scale.width - 150 && p.y > this.scale.height - 130) return;
       const wx = p.worldX;
       const wy = p.worldY;
       let near: Npc | null = null;
@@ -1302,10 +1304,13 @@ export default class MainWorldScene extends Phaser.Scene {
   }
 
   private drawMinimap(): void {
-    const mmW = 120;
-    const mmH = 96;
+    // smaller on phones; pinned to the BOTTOM-right so it never collides with
+    // the React top bar (Exit / Connect Wallet) — which was the mobile overlap.
+    const mobile = this.scale.width < 640;
+    const mmW = mobile ? 84 : 120;
+    const mmH = mobile ? 68 : 96;
     const ox = this.scale.width - mmW - 12;
-    const oy = 92; // below the React wallet chip
+    const oy = this.scale.height - mmH - 14;
     const sx = mmW / WORLD_W;
     const sy = mmH / WORLD_H;
     const g = this.minimap;

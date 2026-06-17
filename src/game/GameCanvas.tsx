@@ -65,7 +65,12 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
         width: parent.clientWidth || window.innerWidth,
         height: parent.clientHeight || window.innerHeight,
         scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
-        render: { preserveDrawingBuffer: true },
+        // roundPixels stops tile seams from tearing/shimmering while the camera
+        // pans (very noticeable on high-DPI mobile); antialias off keeps pixel art
+        // crisp. preserveDrawingBuffer is left off — on some mobile GPUs it leaves
+        // smear/ghost trails while moving.
+        roundPixels: true,
+        render: { roundPixels: true, antialias: false },
         physics: { default: "arcade", arcade: { gravity: { x: 0, y: 0 }, debug: false } },
         scene: [PreloadScene, MainWorldScene],
       });
