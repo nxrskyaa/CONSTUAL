@@ -1,30 +1,33 @@
-// Procedural chiptune background music via the Web Audio API — no audio files.
-// A gentle looping arpeggio over an Am–F–C–G progression with a triangle bass
-// and a soft hi-hat. Must be started from a user gesture (browser autoplay).
+// Procedural lo-fi background music via the Web Audio API — no audio files.
+// A slow, mellow arpeggio over warm maj7/min7 chords with a sine bass, a soft
+// sustained pad, and a gentle hat — run through a lowpass filter for that chill
+// lo-fi warmth. Must be started from a user gesture (browser autoplay).
 
 type Chord = { notes: number[]; root: number }; // semitones relative to A4
 
 const A4 = 440;
 const freq = (semis: number): number => A4 * Math.pow(2, semis / 12);
 
-// Am – F – C – G (uplifting), each chord = 4 sixteenth-note steps.
+// Warm, chilled progression: Am7 – Fmaj7 – Cmaj7 – G7. Each chord lasts 8
+// sixteenth-steps (a slow 32-step loop) so it breathes instead of rushing.
 const PROG: Chord[] = [
-  { notes: [0, 3, 7], root: -12 }, // A minor (A C E)
-  { notes: [-4, 0, 3], root: -16 }, // F major (F A C)
-  { notes: [-9, -5, -2], root: -21 }, // C major (C E G)
-  { notes: [-2, 2, 5], root: -14 }, // G major (G B D)
+  { notes: [0, 3, 7, 10], root: -24 }, // Am7  (A C E G)
+  { notes: [-4, 0, 3, 7], root: -28 }, // Fmaj7 (F A C E)
+  { notes: [-9, -5, -2, 2], root: -33 }, // Cmaj7 (C E G B)
+  { notes: [-2, 2, 5, 8], root: -26 }, // G7   (G B D F)
 ];
 
 export class MusicSystem {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private lp: BiquadFilterNode | null = null;
   private timer: number | null = null;
   private nextNoteTime = 0;
   private step = 0;
   private muted = false;
   private started = false;
-  private readonly bpm = 104;
-  private readonly volume = 0.16;
+  private readonly bpm = 72; // slow + chill
+  private readonly volume = 0.17;
 
   /** Start (or resume) playback. Call from a user gesture. */
   start(): void {
@@ -36,7 +39,13 @@ export class MusicSystem {
       this.ctx = new Ctor();
       this.master = this.ctx.createGain();
       this.master.gain.value = this.muted ? 0 : this.volume;
-      this.master.connect(this.ctx.destination);
+      // a gentle lowpass rolls off the highs for a soft, warm lo-fi tone
+      this.lp = this.ctx.createBiquadFilter();
+      this.lp.type = "lowpass";
+      this.lp.frequency.value = 2100;
+      this.lp.Q.value = 0.5;
+      this.master.connect(this.lp);
+      this.lp.connect(this.ctx.destination);
     }
     void this.ctx.resume();
     if (!this.started) {
@@ -78,33 +87,44 @@ export class MusicSystem {
     if (this.ctx) void this.ctx.close();
     this.ctx = null;
     this.master = null;
+    this.lp = null;
     this.started = false;
   }
 
   private scheduler(): void {
     if (!this.ctx) return;
     const sixteenth = 60 / this.bpm / 4;
-    while (this.nextNoteTime < this.ctx.currentTime + 0.12) {
+    while (this.nextNoteTime < this.ctx.currentTime + 0.15) {
       this.playStep(this.step, this.nextNoteTime, sixteenth);
       this.nextNoteTime += sixteenth;
-      this.step = (this.step + 1) % 16;
+      this.step = (this.step + 1) % 32; // 4 chords × 8 steps
     }
-    this.timer = window.setTimeout(() => this.scheduler(), 25);
+    this.timer = window.setTimeout(() => this.scheduler(), 30);
   }
 
   private playStep(step: number, time: number, sixteenth: number): void {
-    const chord = PROG[Math.floor(step / 4)];
-    const arp = step % 4;
+    const chord = PROG[Math.floor(step / 8)];
+    const arp = step % 8;
 
-    // lead arpeggio (square), one octave up, with a little sparkle on the 4th
-    const leadSemi = chord.notes[arp % chord.notes.length] + 12 + (arp === 3 ? 12 : 0);
-    this.tone(freq(leadSemi), time, sixteenth * 1.7, "square", 0.22);
+    // mellow arpeggio (triangle) on the eighth-notes only — sparse + soft
+    if (arp % 2 === 0) {
+      const idx = (arp / 2) % chord.notes.length;
+      const leadSemi = chord.notes[idx] + 12;
+      // notes overlap a little (long release) so the line feels smooth, not plucky
+      this.tone(freq(leadSemi), time, sixteenth * 3.2, "triangle", 0.13);
+    }
 
-    // bass on each chord change
-    if (arp === 0) this.tone(freq(chord.root), time, sixteenth * 3.4, "triangle", 0.5);
+    // a soft swung grace note near the end of the bar for a lo-fi lilt
+    if (arp === 6) this.tone(freq(chord.notes[chord.notes.length - 1] + 24), time, sixteenth * 2, "sine", 0.06);
 
-    // soft hi-hat on off-beats
-    if (arp === 1 || arp === 3) this.hat(time, 0.03);
+    // warm sine bass + a sustained pad chord on each chord change
+    if (arp === 0) {
+      this.tone(freq(chord.root), time, sixteenth * 7.5, "sine", 0.42);
+      for (const n of chord.notes) this.tone(freq(n), time, sixteenth * 7.5, "sine", 0.05);
+    }
+
+    // one soft, airy hat per chord (very light)
+    if (arp === 4) this.hat(time, 0.025);
   }
 
   private tone(f: number, time: number, dur: number, type: OscillatorType, peak: number): void {
@@ -130,10 +150,10 @@ export class MusicSystem {
     const src = this.ctx.createBufferSource();
     src.buffer = buffer;
     const g = this.ctx.createGain();
-    g.gain.value = 0.06;
+    g.gain.value = 0.035;
     const hp = this.ctx.createBiquadFilter();
     hp.type = "highpass";
-    hp.frequency.value = 7000;
+    hp.frequency.value = 9000;
     src.connect(hp);
     hp.connect(g);
     g.connect(this.master);

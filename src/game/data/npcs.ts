@@ -285,9 +285,10 @@ export const NPCS: NpcDef[] = [
     name: "Whuan",
     spriteKey: "whuan",
     area: "coast",
-    tileX: 22,
-    tileY: 34,
-    wander: true,
+    tileX: 8,
+    tileY: 23,
+    wander: false,
+    activity: "fish", // fishing from the north bank of the pond
     zoneId: null,
     accent: 0x6ee7ff,
     dialog: [
@@ -432,7 +433,7 @@ export const NPCS: NpcDef[] = [
   },
   {
     key: "babass", name: "Babass", spriteKey: "babass", area: "coast",
-    tileX: 21, tileY: 27, wander: true, zoneId: null, accent: 0x73b4ec,
+    tileX: 4, tileY: 27, wander: false, activity: "fish", zoneId: null, accent: 0x73b4ec,
     dialog: [
       "Babass here. Hydrate — your brain is mostly water.",
       "Sip through the day, not all at once.",

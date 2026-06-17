@@ -870,12 +870,21 @@ export default class MainWorldScene extends Phaser.Scene {
     this.time.delayedCall(Phaser.Math.Between(300, 2200), step);
   }
 
-  // Siggy Anime Girl (and any "fish" NPC): a line + bobber on the pond, with
-  // periodic nibbles and catches. The line is redrawn each frame in updateNpcs.
+  // Any "fish" NPC: a line + bobber cast toward the pond, with periodic nibbles
+  // and catches. The cast direction points at the pond centre so anglers on
+  // different banks all face the water. The line is redrawn in updateNpcs.
   private setupFishing(npc: Npc, hx: number, hy: number): void {
-    npc.visual.setFlipX(true); // face left, toward the pond
-    const bx = hx - 70;
-    const by = hy - 26;
+    const pcx = (POND.tx + POND.tw / 2) * TILE_SIZE;
+    const pcy = (POND.ty + POND.th / 2) * TILE_SIZE;
+    let dx = pcx - hx;
+    let dy = pcy - hy;
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len;
+    dy /= len;
+    const cast = 78;
+    const bx = hx + dx * cast;
+    const by = hy - 16 + dy * cast; // -16 lifts the cast toward the rod tip
+    npc.visual.setFlipX(dx < 0); // face the water
     npc.bobber = this.add.image(bx, by, "fx_dot").setTint(0xff5d6c).setScale(2.2).setDepth(2);
     npc.fishLine = this.add.graphics().setDepth(npc.container.y - 1);
     this.tweens.add({ targets: npc.bobber, y: by - 3, duration: 1300, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
@@ -1482,7 +1491,7 @@ export default class MainWorldScene extends Phaser.Scene {
         n.fishLine.clear();
         n.fishLine.lineStyle(1.5, 0xffffff, 0.75);
         n.fishLine.beginPath();
-        n.fishLine.moveTo(n.container.x - 12, n.container.y - 44);
+        n.fishLine.moveTo(n.container.x + (n.visual.flipX ? -12 : 12), n.container.y - 44);
         n.fishLine.lineTo(n.bobber.x, n.bobber.y);
         n.fishLine.strokePath();
         n.fishLine.setDepth(n.container.y + 2);
