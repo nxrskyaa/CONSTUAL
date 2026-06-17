@@ -20,7 +20,9 @@ export type NpcActivity =
   | "sit"
   | "train"
   | "dance" // busts moves in place (e.g. Absol by the ritual flag)
-  | "gather"; // clusters near a spot, chats, then roams and returns
+  | "gather" // clusters near a spot, chats, then roams and returns
+  | "stroll" // chill long-range wander across the whole map
+  | "couple"; // pairs up with a partner NPC (faces them + hearts)
 
 export interface NpcDef {
   key: string; // sprite key (also character id)
@@ -318,6 +320,7 @@ export const NPCS: NpcDef[] = [
     tileX: 46,
     tileY: 16,
     wander: true,
+    activity: "stroll", // roams widely so he isn't just standing around
     zoneId: null,
     accent: 0xffb35c,
     dialog: [
@@ -501,6 +504,79 @@ export const NPCS: NpcDef[] = [
       "RZ. Eyes tired? 20-20-20: every 20 min, look 20 ft away for 20 s.",
       "Blink often — screens steal your tears.",
       "Protect your vision.",
+    ],
+  },
+
+  // ---------------------------------------------------------------------------
+  // Newest roster + special interactions
+  // ---------------------------------------------------------------------------
+
+  // Hazelnty stands with Fly Lucifer as a couple (faces him + hearts).
+  {
+    key: "hazelnty", name: "Hazelnty", spriteKey: "hazelnty", area: "mystic",
+    tileX: 36, tileY: 27, wander: false, activity: "couple", zoneId: null, accent: 0xff9bd2,
+    dialog: [
+      "Hi, I'm Hazelnty! Love and rest heal more than people admit.",
+      "Spend time with someone who makes you calm.",
+      "A warm heart is good for the soul — and the blood pressure!",
+    ],
+  },
+  // Baster keeps Rizan company in the grove.
+  {
+    key: "baster", name: "Baster", spriteKey: "baster", area: "mystic",
+    tileX: 32, tileY: 28, wander: false, activity: "sit", zoneId: null, accent: 0xc8f169,
+    dialog: [
+      "Yo, Baster here, just chilling with Rizan.",
+      "Good company makes hard days lighter.",
+      "Sit, breathe, vibe. No rush.",
+    ],
+  },
+  // Tutufly flutters around the fish pond.
+  {
+    key: "tutufly", name: "Tutufly", spriteKey: "tutufly", area: "coast",
+    tileX: 8, tileY: 22, wander: true, zoneId: null, accent: 0x6ee7ff,
+    dialog: [
+      "Tutufly~ I love the pond. Fresh air clears the mind.",
+      "Take a slow walk by the water when you're stressed.",
+      "Nature is the best reset button.",
+    ],
+  },
+  // SayangXBT strolls the whole map, top to bottom.
+  {
+    key: "sayangxbt", name: "SayangXBT", spriteKey: "sayangxbt", area: "plaza",
+    tileX: 25, tileY: 4, wander: true, activity: "stroll", zoneId: null, accent: 0xffd27a,
+    dialog: [
+      "SayangXBT, just strolling and touching grass.",
+      "A daily walk lowers stress and lifts your mood.",
+      "Keep it chill, keep moving.",
+    ],
+  },
+  // Shen, Strobely, Deell — friendly plaza folks who greet with "Gritual!".
+  {
+    key: "shen", name: "Shen", spriteKey: "shen", area: "plaza",
+    tileX: 21, tileY: 16, wander: true, zoneId: null, accent: 0x9fe7ff,
+    dialog: [
+      "Shen here. Gritual, anon!",
+      "A good morning routine sets the whole day right.",
+      "Hydrate, stretch, and say gm to a friend.",
+    ],
+  },
+  {
+    key: "strobely", name: "Strobely", spriteKey: "strobely", area: "plaza",
+    tileX: 29, tileY: 17, wander: true, zoneId: null, accent: 0xff9bd2,
+    dialog: [
+      "Strobely! Gritual to you!",
+      "Smile more — it's a tiny workout for your mood.",
+      "Community keeps us healthy and happy.",
+    ],
+  },
+  {
+    key: "deell", name: "Deell", spriteKey: "deell", area: "plaza",
+    tileX: 24, tileY: 23, wander: true, zoneId: null, accent: 0xc792ff,
+    dialog: [
+      "Deell here. Gritual, fren!",
+      "Small daily wins add up to big health.",
+      "Be kind to your future self.",
     ],
   },
 ];

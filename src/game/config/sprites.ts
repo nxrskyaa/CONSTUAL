@@ -108,6 +108,15 @@ export const SPRITES: Record<string, CharSprite> = {
   starknight: { key: "starknight", file: "characters/starknight.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   subur: { key: "subur", file: "characters/subur.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   travis: { key: "travis", file: "characters/travis.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+
+  // --- newest roster ---
+  baster: { key: "baster", file: "characters/baster.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  hazelnty: { key: "hazelnty", file: "characters/hazelnty.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  tutufly: { key: "tutufly", file: "characters/tutufly.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  sayangxbt: { key: "sayangxbt", file: "characters/sayangxbt.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  shen: { key: "shen", file: "characters/shen.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  strobely: { key: "strobely", file: "characters/strobely.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  deell: { key: "deell", file: "characters/deell.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
 };
 
 export const ALL_SPRITES: CharSprite[] = Object.values(SPRITES);

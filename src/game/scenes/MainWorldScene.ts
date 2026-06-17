@@ -101,6 +101,9 @@ export default class MainWorldScene extends Phaser.Scene {
     this.weather.create();
     this.clouds = new CloudSystem(this);
     this.startSocial();
+    this.startCouples();
+    this.startGreetings();
+    this.startRandomEvents();
 
     // bridge wiring
     const offWallet = gameBridge.on("wallet:state", (s) => this.onWallet(s));
@@ -809,6 +812,14 @@ export default class MainWorldScene extends Phaser.Scene {
       this.scheduleGather(npc, hx, hy);
       return;
     }
+    if (act === "stroll") {
+      this.scheduleStroll(npc);
+      return;
+    }
+    if (act === "couple") {
+      // couples are wired up in startCouples() once every NPC exists; stay put
+      return;
+    }
     // stationary activities: stay on the spot, occasional shuffle + themed emote
     const emotes: Record<string, [string, string]> = {
       tend: ["✿", "#9be15d"],
@@ -938,6 +949,148 @@ export default class MainWorldScene extends Phaser.Scene {
       }
     };
     this.time.delayedCall(Phaser.Math.Between(300, 2600), step);
+  }
+
+  // Chill long-range stroll: wanders to random points anywhere on the map (a
+  // relaxed top-to-bottom walkabout), pausing to look around. Avoids blockers.
+  private scheduleStroll(npc: Npc): void {
+    const step = () => {
+      if (!npc.container.active) return;
+      let tx = 0;
+      let ty = 0;
+      let ok = false;
+      for (let i = 0; i < 8 && !ok; i++) {
+        tx = Phaser.Math.Between(TILE_SIZE * 2, WORLD_W - TILE_SIZE * 2);
+        ty = Phaser.Math.Between(TILE_SIZE * 2, WORLD_H - TILE_SIZE * 2);
+        ok = !this.isBlocked(tx, ty);
+      }
+      if (!ok) {
+        this.time.delayedCall(800, step);
+        return;
+      }
+      npc.visual.setFlipX(tx < npc.container.x);
+      const dist = Phaser.Math.Distance.Between(npc.container.x, npc.container.y, tx, ty);
+      this.tweens.add({
+        targets: npc.container,
+        x: tx,
+        y: ty,
+        duration: Math.max(900, dist * 18), // unhurried pace
+        ease: "Sine.easeInOut",
+        onComplete: () => {
+          if (Phaser.Math.FloatBetween(0, 1) < 0.4) this.emote(npc, Phaser.Utils.Array.GetRandom(["~", "♪", "✦"]), "#cfe8ff");
+          this.time.delayedCall(Phaser.Math.Between(900, 2600), step);
+        },
+      });
+    };
+    this.time.delayedCall(Phaser.Math.Between(300, 2600), step);
+  }
+
+  private npcByKey(key: string): Npc | undefined {
+    return this.npcs.find((n) => n.def.key === key);
+  }
+
+  // Couples stand together, face each other, sway, and float hearts.
+  private startCouples(): void {
+    const pairs: [string, string][] = [["hazelnty", "flylucifer"]];
+    for (const [ak, bk] of pairs) {
+      const a = this.npcByKey(ak);
+      const b = this.npcByKey(bk);
+      if (!a || !b) continue;
+      // face each other
+      a.visual.setFlipX(b.container.x < a.container.x);
+      b.visual.setFlipX(a.container.x < b.container.x);
+      // gentle togetherness sway
+      this.tweens.add({ targets: a.visual, angle: { from: -3, to: 3 }, duration: 1700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      this.tweens.add({ targets: b.visual, angle: { from: 3, to: -3 }, duration: 1700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      this.time.addEvent({
+        delay: 2600,
+        loop: true,
+        callback: () => {
+          if (!a.container.visible && !b.container.visible) return;
+          this.emote(a, "♥", "#ff8fc0");
+          this.time.delayedCall(700, () => this.emote(b, "♥", "#ff8fc0"));
+        },
+      });
+    }
+  }
+
+  // Friendly NPCs greet with a "Gritual!" chat bubble above their heads.
+  private startGreetings(): void {
+    const keys = ["josh", "jez", "stefan", "shen", "strobely", "deell"];
+    const greeters = this.npcs.filter((n) => keys.includes(n.def.key));
+    if (greeters.length === 0) return;
+    this.time.addEvent({
+      delay: 3200,
+      loop: true,
+      callback: () => {
+        const visible = greeters.filter((n) => n.container.visible);
+        if (visible.length === 0) return;
+        const n = Phaser.Utils.Array.GetRandom(visible);
+        this.speechBubble(n, "Gritual!");
+      },
+    });
+  }
+
+  // a small pixel chat bubble that pops above an NPC, then fades
+  private speechBubble(npc: Npc, text: string): void {
+    const x = npc.container.x;
+    const y = npc.container.y - NPC_TOP - 8;
+    const t = this.add
+      .text(x, y, text, {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color: "#10210a",
+        backgroundColor: "#c8f169",
+        padding: { x: 6, y: 3 },
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(npc.container.y + 4)
+      .setScale(0);
+    this.tweens.add({ targets: t, scale: 1, duration: 160, ease: "Back.easeOut" });
+    this.tweens.add({
+      targets: t,
+      y: y - 10,
+      alpha: { from: 1, to: 0 },
+      delay: 1300,
+      duration: 500,
+      ease: "Sine.easeIn",
+      onComplete: () => t.destroy(),
+    });
+  }
+
+  // light-hearted random events so the world has surprises
+  private startRandomEvents(): void {
+    const quips = ["LOL", "GG", "WAGMI", "Gritual!", "?!", "ser", "gm", "✦✦"];
+    // a random NPC does a funny little reaction
+    this.time.addEvent({
+      delay: 9000,
+      loop: true,
+      callback: () => {
+        const vis = this.npcs.filter((n) => n.container.visible && (n.def.activity ?? "wander") !== "fish");
+        if (vis.length === 0) return;
+        const n = Phaser.Utils.Array.GetRandom(vis);
+        this.speechBubble(n, Phaser.Utils.Array.GetRandom(quips));
+        // a quick hop + spin for comedic effect
+        this.tweens.add({ targets: n.visual, angle: { from: 0, to: 360 }, duration: 520, ease: "Cubic.easeInOut", onComplete: () => n.visual.setAngle(0) });
+        this.tweens.add({ targets: n.visual, y: n.visual.y - 14, duration: 260, yoyo: true, ease: "Quad.easeOut" });
+      },
+    });
+    // an occasional shooting star streaks across the sky
+    this.time.addEvent({
+      delay: 14000,
+      loop: true,
+      callback: () => {
+        if (Phaser.Math.FloatBetween(0, 1) > 0.5) return;
+        const view = this.cameras.main.worldView;
+        const sx = view.x + Phaser.Math.Between(40, view.width - 200);
+        const sy = view.y + Phaser.Math.Between(20, 120);
+        const star = this.add.image(sx, sy, "fx_dot").setTint(0xfff4b0).setScale(3).setDepth(8000);
+        const trail = this.add.image(sx, sy, "fx_dot").setTint(0xffffff).setScale(1.5).setAlpha(0.6).setDepth(7999);
+        this.tweens.add({ targets: [star, trail], x: sx + 260, y: sy + 120, duration: 900, ease: "Sine.easeIn", onComplete: () => { star.destroy(); trail.destroy(); } });
+        this.tweens.add({ targets: [star, trail], alpha: 0, delay: 500, duration: 400 });
+      },
+    });
   }
 
   // every few seconds, two nearby social NPCs face each other and "chat"

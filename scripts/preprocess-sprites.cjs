@@ -71,6 +71,15 @@ const CHARACTERS = [
   { key: "starknight", file: "newcharac/starknight.png", frames: 4 },
   { key: "subur", file: "newcharac/Subur.png", frames: 4 },
   { key: "travis", file: "newcharac/travis.png", frames: 4 },
+
+  // --- newest roster ---
+  { key: "baster", file: "newcharac/Baster.png", frames: 4 },
+  { key: "hazelnty", file: "newcharac/Hazelnty.png", frames: 4 },
+  { key: "tutufly", file: "newcharac/Tutufly.png", frames: 4 },
+  { key: "sayangxbt", file: "newcharac/SayangXBT.png", frames: 4 },
+  { key: "shen", file: "newcharac/Shen.png", frames: 4 },
+  { key: "strobely", file: "newcharac/Strobely.png", frames: 4 },
+  { key: "deell", file: "newcharac/Deell.png", frames: 4 },
 ];
 
 // Single-image landmark buildings + flag -> transparent trimmed PNGs.
