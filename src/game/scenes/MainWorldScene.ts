@@ -48,6 +48,7 @@ export default class MainWorldScene extends Phaser.Scene {
   private npcs: Npc[] = [];
   private solids!: Phaser.Physics.Arcade.StaticGroup;
   private blocked: Phaser.Geom.Rectangle[] = []; // world AABBs NPC wander must avoid
+  private scratchLine = new Phaser.Geom.Line(); // reused for NPC path checks
   private weather!: WeatherSystem;
   private clouds!: CloudSystem;
   private leafEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -590,6 +591,27 @@ export default class MainWorldScene extends Phaser.Scene {
     return false;
   }
 
+  // NPCs walk via tweens (no physics body), so we must reject any target whose
+  // straight-line path crosses a blocker — otherwise they tween *through*
+  // buildings, the flag, the chili plot, or the pond.
+  private pathBlocked(x0: number, y0: number, x1: number, y1: number): boolean {
+    this.scratchLine.setTo(x0, y0, x1, y1);
+    for (const r of this.blocked) {
+      if (Phaser.Geom.Intersects.LineToRectangle(this.scratchLine, r)) return true;
+    }
+    return false;
+  }
+
+  // true when a tween target is both off a blocker and reachable without
+  // crossing one from the NPC's current position
+  private canMoveTo(npc: Npc, tx: number, ty: number): boolean {
+    if (this.isBlocked(tx, ty)) return false;
+    // if somehow already standing inside a blocker, allow any clear target so
+    // the NPC can walk back out instead of freezing forever
+    if (this.isBlocked(npc.container.x, npc.container.y)) return true;
+    return !this.pathBlocked(npc.container.x, npc.container.y, tx, ty);
+  }
+
   private buildScenery(): void {
     const ts = TILE_SIZE;
     const sway: Phaser.GameObjects.Image[] = [];
@@ -834,7 +856,7 @@ export default class MainWorldScene extends Phaser.Scene {
       if (Phaser.Math.FloatBetween(0, 1) < 0.45) {
         const tx = Phaser.Math.Clamp(hx + Phaser.Math.Between(-16, 16), TILE_SIZE, WORLD_W - TILE_SIZE);
         const ty = Phaser.Math.Clamp(hy + Phaser.Math.Between(-10, 10), TILE_SIZE, WORLD_H - TILE_SIZE);
-        if (!this.isBlocked(tx, ty)) {
+        if (this.canMoveTo(npc, tx, ty)) {
           npc.visual.setFlipX(tx < npc.container.x);
           this.tweens.add({ targets: npc.container, x: tx, y: ty, duration: 700, ease: "Sine.easeInOut" });
         }
@@ -913,7 +935,7 @@ export default class MainWorldScene extends Phaser.Scene {
     const moveTo = (tx: number, ty: number, onDone: () => void) => {
       tx = Phaser.Math.Clamp(tx, TILE_SIZE, WORLD_W - TILE_SIZE);
       ty = Phaser.Math.Clamp(ty, TILE_SIZE, WORLD_H - TILE_SIZE);
-      if (this.isBlocked(tx, ty)) {
+      if (!this.canMoveTo(npc, tx, ty)) {
         this.time.delayedCall(500, onDone);
         return;
       }
@@ -962,7 +984,7 @@ export default class MainWorldScene extends Phaser.Scene {
       for (let i = 0; i < 8 && !ok; i++) {
         tx = Phaser.Math.Between(TILE_SIZE * 2, WORLD_W - TILE_SIZE * 2);
         ty = Phaser.Math.Between(TILE_SIZE * 2, WORLD_H - TILE_SIZE * 2);
-        ok = !this.isBlocked(tx, ty);
+        ok = this.canMoveTo(npc, tx, ty);
       }
       if (!ok) {
         this.time.delayedCall(800, step);
@@ -1158,7 +1180,7 @@ export default class MainWorldScene extends Phaser.Scene {
         const r = Phaser.Math.Between(20, radius);
         tx = Phaser.Math.Clamp(homeX + Math.cos(ang) * r, TILE_SIZE, WORLD_W - TILE_SIZE);
         ty = Phaser.Math.Clamp(homeY + Math.sin(ang) * r, TILE_SIZE, WORLD_H - TILE_SIZE);
-        ok = !this.isBlocked(tx, ty);
+        ok = this.canMoveTo(npc, tx, ty);
       }
       if (!ok) {
         idle(700, 1800);
