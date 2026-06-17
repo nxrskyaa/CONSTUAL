@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useConnect, useDisconnect, useSwitchChain } from "wagmi";
-import { RITUAL_CHAIN_ID, switchToRitualTestnet } from "../web3";
+import { publicClient, RITUAL_CHAIN_ID, switchToRitualTestnet } from "../web3";
 import { useConstualGame } from "../hooks/useConstualGame";
 import "./game.css";
 import { gameBridge, type DialogPayload, type NotifyPayload, type XpPayload } from "./bridge";
@@ -289,6 +289,9 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
       setShowCreate(true);
       return;
     }
+    if (account && !(await hasGas(account))) {
+      return pushToast("error", "Your wallet has 0 RITUAL. Get testnet RITUAL gas from the Ritual faucet, then try again.");
+    }
 
     const languageUsed = profile?.preferredLanguage ?? 1;
     try {
@@ -305,7 +308,7 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
       pushToast("error", message);
       gameBridge.emit("tx:result", { zoneId: quizZone.id, kind: "quest", ok: false, message });
     }
-  }, [quiz, quizZone, isConnected, isCorrectChain, profileCreated, profile, game, pushToast, closeQuiz]);
+  }, [quiz, quizZone, isConnected, isCorrectChain, profileCreated, profile, account, game, pushToast, closeQuiz]);
 
   const retryQuiz = useCallback(() => {
     setResult(null);
@@ -317,6 +320,10 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
       pushToast("error", "Display name and Constual username are required.");
       return;
     }
+    if (account && !(await hasGas(account))) {
+      pushToast("error", "Your wallet has 0 RITUAL. Get testnet RITUAL gas from the Ritual faucet, then try again.");
+      return;
+    }
     try {
       pushToast("info", "Confirm the transaction to create your Passport...");
       await game.createProfile(form.displayName.trim(), form.constualUsername.trim(), form.xUsername.trim(), Number(form.preferredLanguage));
@@ -325,7 +332,7 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
     } catch (err) {
       pushToast("error", readableError(err));
     }
-  }, [form, game, pushToast]);
+  }, [form, account, game, pushToast]);
 
   const shortAddr = account ? `${account.slice(0, 6)}…${account.slice(-4)}` : null;
   const xpNum = profile ? Number(profile.xp) : 0;
@@ -515,13 +522,29 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
 }
 
 function readableError(err: unknown): string {
-  if (typeof err === "object" && err && "shortMessage" in err) {
-    const sm = (err as { shortMessage?: unknown }).shortMessage;
-    if (typeof sm === "string") return sm;
+  const raw =
+    (typeof err === "object" && err && "shortMessage" in err && typeof (err as { shortMessage?: unknown }).shortMessage === "string"
+      ? (err as { shortMessage: string }).shortMessage
+      : err instanceof Error
+        ? err.message
+        : "") || "";
+  const lower = raw.toLowerCase();
+  if (/user rejected|denied/i.test(lower)) return "Transaction rejected in wallet.";
+  if (lower.includes("insufficient funds") || lower.includes("insufficient balance") || lower.includes("gas required exceeds") || lower.includes("cannot estimate gas")) {
+    return "Not enough RITUAL for gas. Get testnet RITUAL from the Ritual faucet, then try again.";
   }
-  if (err instanceof Error) {
-    if (/user rejected|denied/i.test(err.message)) return "Transaction rejected in wallet.";
-    return err.message.length > 120 ? err.message.slice(0, 117) + "..." : err.message;
+  if (lower.includes("internal json-rpc error")) {
+    return "Wallet couldn't submit — usually no RITUAL for gas, or a stale Ritual network RPC. Top up RITUAL and re-add the network (RPC https://rpc.ritualfoundation.org, chain 1979).";
   }
+  if (raw) return raw.length > 140 ? raw.slice(0, 137) + "..." : raw;
   return "Something went wrong.";
+}
+
+// returns true if the wallet has gas; otherwise toasts a clear message
+async function hasGas(address: `0x${string}`): Promise<boolean> {
+  try {
+    return (await publicClient.getBalance({ address })) > 0n;
+  } catch {
+    return true; // best-effort: don't block if the balance read fails
+  }
 }

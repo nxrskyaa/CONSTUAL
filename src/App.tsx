@@ -611,6 +611,18 @@ function App() {
       return;
     }
 
+    // pre-flight: a wallet with 0 RITUAL can't pay gas — fail early with a clear
+    // message instead of a cryptic "Internal JSON-RPC error" from the wallet.
+    try {
+      const balance = await publicClient.getBalance({ address: account });
+      if (balance === 0n) {
+        showToast("Your wallet has 0 RITUAL. Get testnet RITUAL gas from the Ritual faucet, then try again.", "error");
+        return;
+      }
+    } catch {
+      /* balance read is best-effort; don't block the tx if it fails */
+    }
+
     setBusy(label);
     try {
       showToast("Confirm the transaction in your wallet.", "info");
@@ -2806,7 +2818,20 @@ function readableError(error: unknown) {
     ) {
       return error.message;
     }
-    if (lower.includes("user rejected")) return "Wallet confirmation was rejected.";
+    if (lower.includes("user rejected") || lower.includes("user denied")) return "Wallet confirmation was rejected.";
+    // no gas — the most common failure on a fresh testnet wallet
+    if (
+      lower.includes("insufficient funds") ||
+      lower.includes("insufficient balance") ||
+      lower.includes("gas required exceeds") ||
+      lower.includes("cannot estimate gas")
+    ) {
+      return "Not enough RITUAL for gas. Get testnet RITUAL from the Ritual faucet, then try again.";
+    }
+    // MetaMask wraps wallet-side RPC/gas failures as this generic error
+    if (lower.includes("internal json-rpc error")) {
+      return "Wallet couldn't submit the transaction — usually no RITUAL for gas, or your wallet's Ritual network RPC is stale. Top up RITUAL and re-add the Ritual network (RPC https://rpc.ritualfoundation.org, chain 1979).";
+    }
     if (lower.includes("execution reverted")) return "Transaction reverted. Contract state, ABI, or eligibility check failed.";
     if (lower.includes("abi")) return "ABI mismatch suspected. Please check ConstualCore function signatures.";
   }
