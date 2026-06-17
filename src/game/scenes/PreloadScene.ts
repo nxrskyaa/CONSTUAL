@@ -18,6 +18,12 @@ export default class PreloadScene extends Phaser.Scene {
   }
 
   preload(): void {
+    // We queue 50+ image files. Phaser's default maxParallelDownloads (32) can
+    // stall the loader when the file count exceeds it and several resolve from
+    // cache at once (inflight drains to 0 while files remain in the list and the
+    // queue is never re-pumped). Loading everything in one batch avoids that.
+    this.load.maxParallelDownloads = ALL_SPRITES.length + 16;
+
     const { width, height } = this.scale;
     const cx = width / 2;
     const cy = height / 2;

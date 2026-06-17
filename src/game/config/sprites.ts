@@ -44,20 +44,32 @@ export const SPRITES: Record<string, CharSprite> = {
     frameHeight: FH,
     frameCount: 6,
     anims: [
-      // frames 1 & 5 are both upright "stepping" poses of similar size, so a
-      // 2-frame cycle reads as a clean walk without the cat changing size.
-      { name: "idle", frames: [5, 0], frameRate: 1.4, repeat: -1 },
-      { name: "walk", frames: [1, 5], frameRate: 7, repeat: -1 },
-      { name: "run", frames: [1, 5], frameRate: 12, repeat: -1 },
-      { name: "interact", frames: [4], frameRate: 6, repeat: 0 },
-      { name: "celebrate", frames: [4, 5], frameRate: 6, repeat: 3 },
-      { name: "sit", frames: [0], frameRate: 1, repeat: 0 },
+      // SiggyRevamp sheet: 0/1 left-facing, 2 back, 3 front-sit, 4/5 front
+      // upright. Frames 4 & 5 are both front upright of equal size -> clean
+      // walk; 3 & 5 (front) make a calm idle without size jitter.
+      { name: "idle", frames: [5, 3], frameRate: 1.6, repeat: -1 },
+      { name: "walk", frames: [4, 5], frameRate: 8, repeat: -1 },
+      { name: "run", frames: [4, 5], frameRate: 13, repeat: -1 },
+      { name: "interact", frames: [3], frameRate: 6, repeat: 0 },
+      { name: "celebrate", frames: [4, 5], frameRate: 8, repeat: 3 },
+      { name: "sit", frames: [3], frameRate: 1, repeat: 0 },
     ],
   },
   seesac: { key: "seesac", file: "characters/seesac.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   siggy_anime: { key: "siggy_anime", file: "characters/siggy_anime.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   decka: { key: "decka", file: "characters/decka.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
-  nxr: { key: "nxr", file: "characters/nxr.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  // nxr_new is a clean 6-pose walk cycle; a light 2-frame "jog" reads as training.
+  nxr: {
+    key: "nxr",
+    file: "characters/nxr.png",
+    frameWidth: FW,
+    frameHeight: FH,
+    frameCount: 6,
+    anims: [
+      { name: "idle", frames: [2, 3], frameRate: 3.5, repeat: -1 },
+      { name: "walk", frames: [2, 3, 5], frameRate: 8, repeat: -1 },
+    ],
+  },
   rikky: { key: "rikky", file: "characters/rikky.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   rizan: { key: "rizan", file: "characters/rizan.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   jez: { key: "jez", file: "characters/jez.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
@@ -76,6 +88,26 @@ export const SPRITES: Record<string, CharSprite> = {
   kippo: { key: "kippo", file: "characters/kippo.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   hytamm: { key: "hytamm", file: "characters/hytamm.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   shin: { key: "shin", file: "characters/shin.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+
+  // --- new roster ---
+  habex: { key: "habex", file: "characters/habex.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  moctx: { key: "moctx", file: "characters/moctx.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  absol: { key: "absol", file: "characters/absol.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  bien: { key: "bien", file: "characters/bien.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  babass: { key: "babass", file: "characters/babass.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  chala: { key: "chala", file: "characters/chala.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  flylucifer: { key: "flylucifer", file: "characters/flylucifer.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  kaidanzer: { key: "kaidanzer", file: "characters/kaidanzer.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  kamalz: { key: "kamalz", file: "characters/kamalz.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  ng: { key: "ng", file: "characters/ng.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  omartuta: { key: "omartuta", file: "characters/omartuta.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  online: { key: "online", file: "characters/online.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  rz: { key: "rz", file: "characters/rz.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  skyzee: { key: "skyzee", file: "characters/skyzee.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  stanelope: { key: "stanelope", file: "characters/stanelope.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  starknight: { key: "starknight", file: "characters/starknight.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  subur: { key: "subur", file: "characters/subur.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  travis: { key: "travis", file: "characters/travis.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
 };
 
 export const ALL_SPRITES: CharSprite[] = Object.values(SPRITES);

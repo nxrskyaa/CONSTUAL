@@ -21,7 +21,8 @@ const NPC_TOP = Math.round(220 * NPC_SCALE * 0.8); // px above a sprite's anchor
 // pond footprint (tiles) — kept inside the coast quadrant, clear of the plaza paths
 const POND = { tx: 5, ty: 24, tw: 8, th: 6 };
 
-const T = { GRASS: 0, GRASS2: 1, PATH: 2, WATER: 3, SAND: 4, MYSTIC: 5, COAST: 6, FLOWER: 7 };
+const T = { GRASS: 0, GRASS2: 1, PATH: 2, WATER: 3, SAND: 4, MYSTIC: 5, COAST: 6, FLOWER: 7, SAND2: 8, MYSTIC2: 9 };
+const TILE_COUNT = 10;
 
 type Area = "forest" | "coast" | "desert" | "mystic" | "plaza";
 
@@ -32,6 +33,8 @@ interface Npc {
   tag: Phaser.GameObjects.Text;
   bubble: Phaser.GameObjects.Text;
   phase: number;
+  fishLine?: Phaser.GameObjects.Graphics;
+  bobber?: Phaser.GameObjects.Image;
 }
 
 export default class MainWorldScene extends Phaser.Scene {
@@ -97,6 +100,7 @@ export default class MainWorldScene extends Phaser.Scene {
     this.weather = new WeatherSystem(this);
     this.weather.create();
     this.clouds = new CloudSystem(this);
+    this.startSocial();
 
     // bridge wiring
     const offWallet = gameBridge.on("wallet:state", (s) => this.onWallet(s));
@@ -187,7 +191,18 @@ export default class MainWorldScene extends Phaser.Scene {
     ground(0x2f7d46, 0x276a3b, 0x3f9657, 0x5fb277, T.FLOWER);
     this.rect(g, 0xff7ab0, T.FLOWER * ts + 9, 9, 4, 4);
     this.rect(g, 0xffd23f, T.FLOWER * ts + 19, 19, 4, 4);
-    g.generateTexture("worldtiles", ts * 8, ts);
+    // sand variant — slightly warmer/darker dune patch
+    this.rect(g, 0xd8bc7c, T.SAND2 * ts, 0, ts, ts);
+    for (let yy = 5; yy < ts; yy += 9) for (let xx = (yy % 18 === 5 ? 5 : 11); xx < ts; xx += 10) this.rect(g, 0xc4a766, T.SAND2 * ts + xx, yy, 3, 2, 0.6);
+    this.rect(g, 0xe9d49a, T.SAND2 * ts + 10, 8, 3, 2, 0.7);
+    this.rect(g, 0xb7995c, T.SAND2 * ts + 20, 23, 4, 2, 0.6);
+    // mystic variant — deeper violet with faint runes/sparkle
+    this.rect(g, 0x413567, T.MYSTIC2 * ts, 0, ts, ts);
+    for (let yy = 3; yy < ts; yy += 8) for (let xx = (yy % 16 === 3 ? 3 : 9); xx < ts; xx += 9) this.rect(g, 0x342a54, T.MYSTIC2 * ts + xx, yy, 2, 2, 0.6);
+    this.rect(g, 0x7d6ac0, T.MYSTIC2 * ts + 8, 11, 2, 2, 0.9);
+    this.rect(g, 0xa896e0, T.MYSTIC2 * ts + 22, 19, 2, 2, 0.9);
+    this.rect(g, 0x5a4a90, T.MYSTIC2 * ts + 15, 6, 3, 3, 0.8);
+    g.generateTexture("worldtiles", ts * TILE_COUNT, ts);
     g.clear();
 
     // animated water tile
@@ -358,18 +373,104 @@ export default class MainWorldScene extends Phaser.Scene {
     return x > px - m && x < px + pw + m && y > py - m && y < py + ph + m;
   }
 
+  // deterministic 2D hash -> [0,1) (GLSL-style fract(sin) hash; well-distributed
+  // across the full range, unlike a bit-mixing hash which biases low in JS floats)
+  private hash2(x: number, y: number): number {
+    const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+    return s - Math.floor(s);
+  }
+
+  // smooth value noise (bilinear, smoothstep) over the hash grid
+  private vnoise(x: number, y: number): number {
+    const xi = Math.floor(x);
+    const yi = Math.floor(y);
+    const xf = x - xi;
+    const yf = y - yi;
+    const u = xf * xf * (3 - 2 * xf);
+    const v = yf * yf * (3 - 2 * yf);
+    const tl = this.hash2(xi, yi);
+    const tr = this.hash2(xi + 1, yi);
+    const bl = this.hash2(xi, yi + 1);
+    const br = this.hash2(xi + 1, yi + 1);
+    return Phaser.Math.Linear(Phaser.Math.Linear(tl, tr, u), Phaser.Math.Linear(bl, br, u), v);
+  }
+
+  // biome by quadrant on (possibly warped) float coords — no plaza here, the
+  // plaza/paths are overlaid separately so borders can be irregular
+  private biomeAt(fx: number, fy: number): Area {
+    const cx = MAP_W / 2;
+    const cy = MAP_H / 2;
+    if (fx < cx && fy < cy) return "forest";
+    if (fx < cx && fy >= cy) return "coast";
+    if (fx >= cx && fy < cy) return "desert";
+    return "mystic";
+  }
+
+  // winding cobble paths from the central plaza out to each zone hub
+  private buildPathSet(): Set<number> {
+    const set = new Set<number>();
+    const cx = 25;
+    const cy = 20;
+    const hubs: [number, number][] = [
+      [13, 9], // forest
+      [12, 26], // coast / springs
+      [40, 11], // desert bazaar
+      [38, 30], // mystic grove
+    ];
+    const key = (tx: number, ty: number) => tx * 1000 + ty;
+    const mark = (tx: number, ty: number) => {
+      if (tx >= 0 && tx < MAP_W && ty >= 0 && ty < MAP_H && !this.inPond(tx, ty)) set.add(key(tx, ty));
+    };
+    for (const [hx, hy] of hubs) {
+      const horiz = Math.abs(hx - cx) >= Math.abs(hy - cy);
+      const steps = 120;
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        let x = Phaser.Math.Linear(cx, hx, t);
+        let y = Phaser.Math.Linear(cy, hy, t);
+        // perpendicular wobble so the path snakes instead of running straight
+        const w = (this.vnoise(t * 5 + hx * 0.5, t * 5 + hy * 0.5) - 0.5) * 5;
+        if (horiz) y += w;
+        else x += w;
+        const txi = Math.round(x);
+        const tyi = Math.round(y);
+        mark(txi, tyi);
+        // 2-tile-wide road
+        if (horiz) mark(txi, tyi + 1);
+        else mark(txi + 1, tyi);
+      }
+    }
+    return set;
+  }
+
   private buildMap(): void {
+    const paths = this.buildPathSet();
+    const pathKey = (tx: number, ty: number) => tx * 1000 + ty;
+    const cx = 25;
+    const cy = 20;
     const data: number[][] = [];
     for (let y = 0; y < MAP_H; y++) {
       const row: number[] = [];
       for (let x = 0; x < MAP_W; x++) {
-        const a = this.areaOf(x, y);
-        let tile = T.GRASS;
-        if (a === "plaza") tile = T.PATH;
-        else if (a === "forest") tile = Phaser.Math.Between(0, 9) < 2 ? T.FLOWER : Phaser.Math.Between(0, 1) ? T.GRASS : T.GRASS2;
-        else if (a === "coast") tile = T.COAST;
-        else if (a === "desert") tile = T.SAND;
-        else tile = T.MYSTIC;
+        // central stone plaza: a soft disc around the flag (irregular cobble edge)
+        const dCenter = Math.hypot(x - cx, y - cy);
+        const plazaR = 4.2 + (this.vnoise(x * 0.6, y * 0.6) - 0.5) * 1.8;
+        if (dCenter < plazaR || paths.has(pathKey(x, y))) {
+          row.push(T.PATH);
+          continue;
+        }
+        // warp the quadrant boundary with noise so biomes meet in wavy seams
+        const warp = 5.5;
+        const wx = x + (this.vnoise(x * 0.16, y * 0.16) - 0.5) * warp;
+        const wy = y + (this.vnoise(x * 0.16 + 41, y * 0.16 + 17) - 0.5) * warp;
+        const a = this.biomeAt(wx, wy);
+        // intra-biome variety from a second noise field (meadows, sandy banks…)
+        const n = this.vnoise(x * 0.33 + 9, y * 0.33 + 3);
+        let tile: number;
+        if (a === "forest") tile = n > 0.66 ? T.FLOWER : n > 0.42 ? T.GRASS2 : T.GRASS;
+        else if (a === "coast") tile = n > 0.72 ? T.SAND : n > 0.4 ? T.COAST : T.GRASS2;
+        else if (a === "desert") tile = n > 0.55 ? T.SAND2 : T.SAND;
+        else tile = n > 0.55 ? T.MYSTIC2 : T.MYSTIC;
         row.push(tile);
       }
       data.push(row);
@@ -656,7 +757,7 @@ export default class MainWorldScene extends Phaser.Scene {
 
       visual.on("pointerdown", () => this.interactWith(npc));
 
-      if (def.wander) this.scheduleWander(npc, x, y);
+      this.scheduleBehavior(npc, x, y);
 
       // occasional music note via timer (not in update)
       this.time.addEvent({
@@ -672,6 +773,210 @@ export default class MainWorldScene extends Phaser.Scene {
         },
       });
     }
+  }
+
+  // a floating symbol above an NPC (chat / activity emote)
+  private emote(npc: Npc, symbol: string, color = "#e8f4fd"): void {
+    if (!npc.container.visible) return;
+    const e = this.add
+      .text(npc.container.x + Phaser.Math.Between(-6, 8), npc.container.y - NPC_TOP - 4, symbol, {
+        fontFamily: "monospace",
+        fontSize: "15px",
+        color,
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5)
+      .setDepth(npc.container.y + 3);
+    this.tweens.add({ targets: e, y: e.y - 22, alpha: { from: 1, to: 0 }, duration: 1400, ease: "Sine.easeOut", onComplete: () => e.destroy() });
+  }
+
+  // route each NPC to its activity (fishing, gardening, meditating…) or wander
+  private scheduleBehavior(npc: Npc, hx: number, hy: number): void {
+    const act = npc.def.activity ?? "wander";
+    if (act === "wander") {
+      this.scheduleWander(npc, hx, hy);
+      return;
+    }
+    if (act === "fish") {
+      this.setupFishing(npc, hx, hy);
+      return;
+    }
+    if (act === "dance") {
+      this.scheduleDance(npc);
+      return;
+    }
+    if (act === "gather") {
+      this.scheduleGather(npc, hx, hy);
+      return;
+    }
+    // stationary activities: stay on the spot, occasional shuffle + themed emote
+    const emotes: Record<string, [string, string]> = {
+      tend: ["✿", "#9be15d"],
+      meditate: ["✦", "#c792ff"],
+      sit: ["♪", "#9fe7ff"],
+      train: ["✦", "#c8f169"],
+    };
+    const [sym, col] = emotes[act] ?? ["·", "#e8f4fd"];
+    if (act === "sit") npc.visual.setFrame(0); // calmer pose
+    const step = () => {
+      if (!npc.container.active) return;
+      if (Phaser.Math.FloatBetween(0, 1) < 0.45) {
+        const tx = Phaser.Math.Clamp(hx + Phaser.Math.Between(-16, 16), TILE_SIZE, WORLD_W - TILE_SIZE);
+        const ty = Phaser.Math.Clamp(hy + Phaser.Math.Between(-10, 10), TILE_SIZE, WORLD_H - TILE_SIZE);
+        if (!this.isBlocked(tx, ty)) {
+          npc.visual.setFlipX(tx < npc.container.x);
+          this.tweens.add({ targets: npc.container, x: tx, y: ty, duration: 700, ease: "Sine.easeInOut" });
+        }
+      } else {
+        this.emote(npc, sym, col);
+      }
+      this.time.delayedCall(Phaser.Math.Between(1800, 4200), step);
+    };
+    this.time.delayedCall(Phaser.Math.Between(300, 2200), step);
+  }
+
+  // Siggy Anime Girl (and any "fish" NPC): a line + bobber on the pond, with
+  // periodic nibbles and catches. The line is redrawn each frame in updateNpcs.
+  private setupFishing(npc: Npc, hx: number, hy: number): void {
+    npc.visual.setFlipX(true); // face left, toward the pond
+    const bx = hx - 70;
+    const by = hy - 26;
+    npc.bobber = this.add.image(bx, by, "fx_dot").setTint(0xff5d6c).setScale(2.2).setDepth(2);
+    npc.fishLine = this.add.graphics().setDepth(npc.container.y - 1);
+    this.tweens.add({ targets: npc.bobber, y: by - 3, duration: 1300, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+
+    const loop = () => {
+      if (!npc.container.active || !npc.bobber) return;
+      // a nibble: bobber dips, then a catch
+      this.tweens.add({
+        targets: npc.bobber,
+        y: by + 7,
+        duration: 160,
+        yoyo: true,
+        repeat: 2,
+        onComplete: () => {
+          this.emote(npc, "!", "#ffe066");
+          this.time.delayedCall(420, () => this.emote(npc, "★", "#9be15d"));
+        },
+      });
+      this.time.delayedCall(Phaser.Math.Between(4500, 8500), loop);
+    };
+    this.time.delayedCall(Phaser.Math.Between(1800, 3600), loop);
+  }
+
+  // Absol-style dancing: stays put and busts a looping move (hop + spin + flip)
+  // with rhythmic music notes. Pure tween/visual — no body movement.
+  private scheduleDance(npc: Npc): void {
+    const v = npc.visual;
+    const baseY = v.y;
+    // a bouncy, looping shimmy + side-to-side lean
+    this.tweens.add({
+      targets: v,
+      y: baseY - 9,
+      duration: 260,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+    this.tweens.add({
+      targets: v,
+      angle: { from: -10, to: 10 },
+      duration: 420,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+    const beat = () => {
+      if (!npc.container.active) return;
+      v.setFlipX(!v.flipX); // face-change "step"
+      this.emote(npc, Phaser.Utils.Array.GetRandom(["♪", "♫", "✦"]), "#ffe066");
+      this.time.delayedCall(Phaser.Math.Between(900, 1500), beat);
+    };
+    this.time.delayedCall(Phaser.Math.Between(300, 1200), beat);
+  }
+
+  // Gathering: hangs around a shared spot in a tight cluster (so groups form and
+  // chat via startSocial), then occasionally roams off and wanders back —
+  // "berkumpul bareng ... lalu jalan jalan lagi".
+  private scheduleGather(npc: Npc, gx: number, gy: number): void {
+    const moveTo = (tx: number, ty: number, onDone: () => void) => {
+      tx = Phaser.Math.Clamp(tx, TILE_SIZE, WORLD_W - TILE_SIZE);
+      ty = Phaser.Math.Clamp(ty, TILE_SIZE, WORLD_H - TILE_SIZE);
+      if (this.isBlocked(tx, ty)) {
+        this.time.delayedCall(500, onDone);
+        return;
+      }
+      npc.visual.setFlipX(tx < npc.container.x);
+      const dist = Phaser.Math.Distance.Between(npc.container.x, npc.container.y, tx, ty);
+      this.tweens.add({
+        targets: npc.container,
+        x: tx,
+        y: ty,
+        duration: Math.max(500, dist * 16),
+        ease: "Sine.easeInOut",
+        onComplete: onDone,
+      });
+    };
+    const step = () => {
+      if (!npc.container.active) return;
+      const roll = Phaser.Math.FloatBetween(0, 1);
+      if (roll < 0.2) {
+        // wander off a bit, then it'll drift back on a later tick
+        const ang = Phaser.Math.FloatBetween(0, Math.PI * 2);
+        const r = Phaser.Math.Between(90, 170);
+        moveTo(gx + Math.cos(ang) * r, gy + Math.sin(ang) * r, () => this.time.delayedCall(Phaser.Math.Between(1500, 3500), step));
+      } else if (roll < 0.6) {
+        // shuffle to a fresh spot within the cluster
+        const ang = Phaser.Math.FloatBetween(0, Math.PI * 2);
+        const r = Phaser.Math.Between(14, 48);
+        moveTo(gx + Math.cos(ang) * r, gy + Math.sin(ang) * r, () => this.time.delayedCall(Phaser.Math.Between(1200, 2800), step));
+      } else {
+        // hang out: glance around / emote
+        if (Phaser.Math.FloatBetween(0, 1) < 0.5) npc.visual.setFlipX(!npc.visual.flipX);
+        if (Phaser.Math.FloatBetween(0, 1) < 0.5) this.emote(npc, Phaser.Utils.Array.GetRandom(["♪", "~", "✦", "!"]), "#cfe8ff");
+        this.time.delayedCall(Phaser.Math.Between(1400, 3200), step);
+      }
+    };
+    this.time.delayedCall(Phaser.Math.Between(300, 2600), step);
+  }
+
+  // every few seconds, two nearby social NPCs face each other and "chat"
+  private startSocial(): void {
+    this.time.addEvent({
+      delay: 4500,
+      loop: true,
+      callback: () => {
+        const social: ReadonlySet<string> = new Set(["wander", "gather", "dance"]);
+        const free = this.npcs.filter((n) => social.has(n.def.activity ?? "wander") && n.container.visible);
+        Phaser.Utils.Array.Shuffle(free);
+        for (let i = 0; i < free.length; i++) {
+          for (let j = i + 1; j < free.length; j++) {
+            const a = free[i];
+            const b = free[j];
+            if (Phaser.Math.Distance.Between(a.container.x, a.container.y, b.container.x, b.container.y) < 130) {
+              this.chat(a, b);
+              return;
+            }
+          }
+        }
+      },
+    });
+  }
+
+  private chat(a: Npc, b: Npc): void {
+    a.visual.setFlipX(b.container.x < a.container.x);
+    b.visual.setFlipX(a.container.x < b.container.x);
+    const syms = ["!", "♪", "✦", "~", "?"];
+    let n = 0;
+    this.time.addEvent({
+      delay: 750,
+      repeat: 4,
+      callback: () => {
+        const who = n % 2 === 0 ? a : b;
+        this.emote(who, Phaser.Utils.Array.GetRandom(syms), "#cfe8ff");
+        n++;
+      },
+    });
   }
 
   // Each NPC gets a little "personality" so the crowd doesn't move in lockstep:
@@ -980,15 +1285,28 @@ export default class MainWorldScene extends Phaser.Scene {
       const visible = Phaser.Geom.Rectangle.Overlaps(view, new Phaser.Geom.Rectangle(n.container.x - 60, n.container.y - 100, 120, 140));
       n.container.setVisible(visible);
       n.tag.setVisible(visible);
+      n.bobber?.setVisible(visible);
+      n.fishLine?.setVisible(visible);
       if (!visible) {
         n.bubble.setVisible(false);
         continue;
       }
-      // gentle breathing/idle bob on the visual (independent of wander)
-      n.visual.y = -Math.abs(Math.sin((t + n.phase) * 0.004)) * 2.6;
+      // gentle breathing/idle bob on the visual (independent of wander).
+      // dancers drive their own y/angle via tween, so leave them alone.
+      if (n.def.activity !== "dance") n.visual.y = -Math.abs(Math.sin((t + n.phase) * 0.004)) * 2.6;
       n.container.setDepth(n.container.y);
       n.tag.setPosition(n.container.x, n.container.y - NPC_TOP).setDepth(n.container.y + 1);
       n.bubble.setPosition(n.container.x, n.container.y - NPC_TOP - 12).setDepth(n.container.y + 1);
+      // redraw the fishing line from the angler's hand to the bobber
+      if (n.fishLine && n.bobber) {
+        n.fishLine.clear();
+        n.fishLine.lineStyle(1.5, 0xffffff, 0.75);
+        n.fishLine.beginPath();
+        n.fishLine.moveTo(n.container.x - 12, n.container.y - 44);
+        n.fishLine.lineTo(n.bobber.x, n.bobber.y);
+        n.fishLine.strokePath();
+        n.fishLine.setDepth(n.container.y + 2);
+      }
     }
   }
 }

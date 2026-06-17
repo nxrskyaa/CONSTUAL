@@ -11,6 +11,17 @@ import { getZone } from "./zones";
 
 export type WorldArea = "forest" | "coast" | "desert" | "mystic" | "plaza";
 
+// what an NPC does in the world (beyond plain idle/walk)
+export type NpcActivity =
+  | "wander"
+  | "fish"
+  | "tend"
+  | "meditate"
+  | "sit"
+  | "train"
+  | "dance" // busts moves in place (e.g. Absol by the ritual flag)
+  | "gather"; // clusters near a spot, chats, then roams and returns
+
 export interface NpcDef {
   key: string; // sprite key (also character id)
   name: string;
@@ -22,14 +33,15 @@ export interface NpcDef {
   zoneId: number | null; // quest topic; null = dialog only
   dialog?: string[]; // used when zoneId is null
   accent: number; // name-tag accent color
+  activity?: NpcActivity; // default "wander"
 }
 
 export const NPCS: NpcDef[] = [
   // --- Quest givers (zones 1-5) --- positions are tiles on the 50x40 map
   { key: "seesac", name: "Seesac", spriteKey: "seesac", area: "forest", tileX: 12, tileY: 10, wander: true, zoneId: 1, accent: 0xff8db0 },
-  { key: "siggy_anime", name: "Siggy Anime Girl", spriteKey: "siggy_anime", area: "coast", tileX: 17, tileY: 29, wander: true, zoneId: 2, accent: 0x6ee7ff },
-  { key: "rikky", name: "Rikky", spriteKey: "rikky", area: "forest", tileX: 15, tileY: 12, wander: true, zoneId: 3, accent: 0xc8f169 },
-  { key: "rizan", name: "Rizan", spriteKey: "rizan", area: "mystic", tileX: 33, tileY: 28, wander: true, zoneId: 4, accent: 0xc792ff },
+  { key: "siggy_anime", name: "Siggy Anime Girl", spriteKey: "siggy_anime", area: "coast", tileX: 13, tileY: 27, wander: false, zoneId: 2, accent: 0x6ee7ff, activity: "fish" },
+  { key: "rikky", name: "Rikky", spriteKey: "rikky", area: "forest", tileX: 15, tileY: 12, wander: false, zoneId: 3, accent: 0xc8f169, activity: "sit" },
+  { key: "rizan", name: "Rizan", spriteKey: "rizan", area: "mystic", tileX: 33, tileY: 28, wander: false, zoneId: 4, accent: 0xc792ff, activity: "meditate" },
   { key: "jez", name: "Dr. Jez", spriteKey: "jez", area: "forest", tileX: 10, tileY: 14, wander: true, zoneId: 5, accent: 0x7ee0a0 },
 
   // --- Dialog-only characters ---
@@ -75,6 +87,7 @@ export const NPCS: NpcDef[] = [
     tileX: 28,
     tileY: 18,
     wander: false,
+    activity: "train",
     zoneId: null,
     accent: 0xc8f169,
     dialog: [
@@ -91,7 +104,8 @@ export const NPCS: NpcDef[] = [
     area: "plaza",
     tileX: 22,
     tileY: 18,
-    wander: true,
+    wander: false,
+    activity: "sit",
     zoneId: null,
     accent: 0x9be15d,
     dialog: [
@@ -122,9 +136,10 @@ export const NPCS: NpcDef[] = [
     name: "Asceno",
     spriteKey: "asceno",
     area: "desert",
-    tileX: 35,
-    tileY: 17,
-    wander: true,
+    tileX: 37,
+    tileY: 18,
+    wander: false,
+    activity: "tend",
     zoneId: null,
     accent: 0xe0b878,
     dialog: [
@@ -236,7 +251,8 @@ export const NPCS: NpcDef[] = [
     area: "mystic",
     tileX: 42,
     tileY: 30,
-    wander: true,
+    wander: false,
+    activity: "meditate",
     zoneId: null,
     accent: 0xff9bd2,
     dialog: [
@@ -252,7 +268,8 @@ export const NPCS: NpcDef[] = [
     area: "mystic",
     tileX: 36,
     tileY: 34,
-    wander: true,
+    wander: false,
+    activity: "meditate",
     zoneId: null,
     accent: 0x8a6cff,
     dialog: [
@@ -298,8 +315,8 @@ export const NPCS: NpcDef[] = [
     name: "Shin",
     spriteKey: "shin",
     area: "desert",
-    tileX: 44,
-    tileY: 13,
+    tileX: 46,
+    tileY: 16,
     wander: true,
     zoneId: null,
     accent: 0xffb35c,
@@ -307,6 +324,183 @@ export const NPCS: NpcDef[] = [
       "I'm Shin. Discipline beats motivation — small daily reps win.",
       "Sleep schedule, water, sunlight, movement. Lock the basics.",
       "Build your health like you build on-chain: one solid block at a time.",
+    ],
+  },
+
+  // ---------------------------------------------------------------------------
+  // New roster (D:/characters/newcharac) — placed in lively groups across the
+  // world with their own activities so the map feels alive, not generic.
+  // ---------------------------------------------------------------------------
+
+  // -- Plaza, around the Ritual flag (a little crowd + Absol dancing) --
+  {
+    key: "absol", name: "Absol", spriteKey: "absol", area: "plaza",
+    tileX: 27, tileY: 22, wander: false, activity: "dance", zoneId: null, accent: 0x6ee7ff,
+    dialog: [
+      "I'm Absol — dancing keeps the body and the mood alive!",
+      "Move a little every hour: shake it out, stretch, vibe.",
+      "Health is a celebration, not a chore. Dance with me by the flag!",
+    ],
+  },
+  {
+    key: "travis", name: "Travis", spriteKey: "travis", area: "plaza",
+    tileX: 23, tileY: 22, wander: false, activity: "gather", zoneId: null, accent: 0xff9bd2,
+    dialog: [
+      "Yo, Travis here. Good friends are good medicine.",
+      "Talk it out — connection lowers stress more than any supplement.",
+      "Stay social, stay healthy.",
+    ],
+  },
+  {
+    key: "online", name: "Online", spriteKey: "online", area: "plaza",
+    tileX: 27, tileY: 18, wander: false, activity: "gather", zoneId: null, accent: 0x9fe7ff,
+    dialog: [
+      "I'm Online — always connected, but balance is key.",
+      "Take real breaks from the screen, anon.",
+      "Log off sometimes; the timeline can wait.",
+    ],
+  },
+  {
+    key: "ng", name: "NG", spriteKey: "ng", area: "plaza",
+    tileX: 22, tileY: 21, wander: true, zoneId: null, accent: 0xc8f169,
+    dialog: [
+      "NG here. Small habits compound into big health.",
+      "Water, walk, sleep — repeat daily.",
+      "Keep stacking the basics.",
+    ],
+  },
+
+  // -- Forest clearing crew --
+  {
+    key: "habex", name: "Habex", spriteKey: "habex", area: "forest",
+    tileX: 6, tileY: 7, wander: false, activity: "gather", zoneId: null, accent: 0x7ee0a0,
+    dialog: [
+      "Hey, I'm Habex. Stretch those shoulders after long sessions.",
+      "Mobility today saves pain tomorrow.",
+      "Loosen up, builder.",
+    ],
+  },
+  {
+    key: "chala", name: "Chala", spriteKey: "chala", area: "forest",
+    tileX: 8, tileY: 6, wander: false, activity: "gather", zoneId: null, accent: 0xffd27a,
+    dialog: [
+      "Chala! Sunshine and fresh air reset the mind.",
+      "Ten minutes outside beats ten more scrolling.",
+      "Go catch some light.",
+    ],
+  },
+  {
+    key: "bien", name: "Bien", spriteKey: "bien", area: "forest",
+    tileX: 18, tileY: 14, wander: true, zoneId: null, accent: 0x9be15d,
+    dialog: [
+      "Bien here. Posture check — sit tall, screen at eye level.",
+      "Your spine is a long-term hold.",
+      "Move every half hour.",
+    ],
+  },
+  {
+    key: "moctx", name: "Moctx", spriteKey: "moctx", area: "forest",
+    tileX: 20, tileY: 8, wander: true, zoneId: null, accent: 0xb0b8ff,
+    dialog: [
+      "Moctx here. Walk and think — movement boosts ideas.",
+      "Pacing beats sitting when you're stuck.",
+      "Keep moving, keep building.",
+    ],
+  },
+
+  // -- Coast / springs --
+  {
+    key: "skyzee", name: "Skyzee", spriteKey: "skyzee", area: "coast",
+    tileX: 15, tileY: 30, wander: false, activity: "gather", zoneId: null, accent: 0x6ee7ff,
+    dialog: [
+      "I'm Skyzee. Deep breaths clear the head fast.",
+      "In for four, out for four. Try it.",
+      "Calm mind, steady hands.",
+    ],
+  },
+  {
+    key: "kamalz", name: "Kamalz", spriteKey: "kamalz", area: "coast",
+    tileX: 19, tileY: 31, wander: false, activity: "sit", zoneId: null, accent: 0xffb35c,
+    dialog: [
+      "Kamalz, resting on the bench. Rest is productive.",
+      "Naps and breaks recharge focus.",
+      "Don't grind on empty.",
+    ],
+  },
+  {
+    key: "babass", name: "Babass", spriteKey: "babass", area: "coast",
+    tileX: 21, tileY: 27, wander: true, zoneId: null, accent: 0x73b4ec,
+    dialog: [
+      "Babass here. Hydrate — your brain is mostly water.",
+      "Sip through the day, not all at once.",
+      "Stay fluid.",
+    ],
+  },
+
+  // -- Desert bazaar --
+  {
+    key: "omartuta", name: "Omartuta", spriteKey: "omartuta", area: "desert",
+    tileX: 42, tileY: 13, wander: false, activity: "gather", zoneId: null, accent: 0xffb35c,
+    dialog: [
+      "Omartuta! The bazaar's busy — eat real food, not just snacks.",
+      "Whole foods give steady energy; sugar spikes crash you.",
+      "Good fuel, good gains.",
+    ],
+  },
+  {
+    key: "subur", name: "Subur", spriteKey: "subur", area: "desert",
+    tileX: 44, tileY: 15, wander: false, activity: "gather", zoneId: null, accent: 0xe0b878,
+    dialog: [
+      "I'm Subur. Grow your health like a garden — daily care.",
+      "Patience and consistency win.",
+      "Tend to yourself well.",
+    ],
+  },
+  {
+    key: "starknight", name: "Starknight", spriteKey: "starknight", area: "desert",
+    tileX: 30, tileY: 12, wander: false, activity: "train", zoneId: null, accent: 0xc8f169,
+    dialog: [
+      "Starknight, training hard! Strength is built rep by rep.",
+      "Even bodyweight squats count between blocks.",
+      "Move that body, anon.",
+    ],
+  },
+
+  // -- Mystic grove gathering --
+  {
+    key: "kaidanzer", name: "Kai Danzer", spriteKey: "kaidanzer", area: "mystic",
+    tileX: 38, tileY: 24, wander: false, activity: "gather", zoneId: null, accent: 0xc792ff,
+    dialog: [
+      "Kai Danzer here. Community keeps us going.",
+      "Share the load — no one builds alone.",
+      "Gather, talk, recharge.",
+    ],
+  },
+  {
+    key: "stanelope", name: "Stanelope", spriteKey: "stanelope", area: "mystic",
+    tileX: 40, tileY: 27, wander: false, activity: "gather", zoneId: null, accent: 0xff9bd2,
+    dialog: [
+      "Stanelope! Laughter is underrated medicine.",
+      "Hang with friends, share a laugh, feel lighter.",
+      "Joy is good for the heart.",
+    ],
+  },
+  {
+    key: "flylucifer", name: "Fly Lucifer", spriteKey: "flylucifer", area: "mystic",
+    tileX: 35, tileY: 27, wander: false, activity: "meditate", zoneId: null, accent: 0x8a6cff,
+    dialog: [
+      "Fly Lucifer, meditating. Stillness sharpens the mind.",
+      "Close your eyes, breathe, let thoughts pass.",
+      "Find your calm.",
+    ],
+  },
+  {
+    key: "rz", name: "RZ", spriteKey: "rz", area: "mystic",
+    tileX: 30, tileY: 26, wander: true, zoneId: null, accent: 0x9fd0ff,
+    dialog: [
+      "RZ. Eyes tired? 20-20-20: every 20 min, look 20 ft away for 20 s.",
+      "Blink often — screens steal your tears.",
+      "Protect your vision.",
     ],
   },
 ];

@@ -3079,40 +3079,57 @@ html[data-theme="dark"] body::before {
    pixel brand. Also fixes the white navbar that broke dark mode.
    ============================================================ */
 .navbar {
-  background: #0f1424 !important;
+  /* theme-aware surface: clean cream bar in light mode, deep arcade bar in dark */
+  background: var(--color-white) !important;
   border: var(--pix-border) !important;
   border-radius: 10px !important;
   box-shadow: var(--pix-shadow) !important;
   backdrop-filter: none !important;
+  overflow: visible; /* let the wallet dropdown escape the bar */
 }
-.navbar .brand,
-.navbar .brand *,
-.navbar .nav-pill button,
+/* brand + generic nav links follow the theme token (dark-on-light / light-on-dark) */
+.navbar .logo-button,
+.navbar .constual-logo,
+.navbar .constual-logo span,
 .navbar a {
-  color: #e9edf5;
-}
-.navbar .brand strong,
-.navbar .brand span {
-  font-family: var(--pixel) !important;
-  font-size: 0.7rem !important;
-  letter-spacing: 0.5px;
-  color: var(--color-lime);
+  color: var(--color-charcoal);
 }
 .navbar .nav-pill {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-lime-soft) !important;
+  border: 1px solid var(--color-line);
 }
 .navbar .nav-pill button {
-  color: #cfd6e6 !important;
+  color: var(--color-charcoal) !important;
 }
 .navbar .nav-pill button:hover {
-  background: rgba(200, 241, 105, 0.16) !important;
+  background: rgba(159, 233, 107, 0.3) !important;
 }
-.navbar .nav-pill .active {
+.navbar .nav-pill .active,
+.navbar .nav-pill .active * {
   background: var(--color-lime) !important;
   color: #14210a !important;
 }
-/* theme toggle button in the navbar */
+
+/* keep the right-hand action cluster inside the navbar's bordered box so the
+   Connect Wallet button never spills past / cuts through the frame */
+.nav-actions {
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+.wallet-shell {
+  min-width: 0;
+}
+.wallet-connect,
+.wallet-pill {
+  max-width: 100%;
+  white-space: nowrap;
+}
+.wallet-pill .wallet-main {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* theme toggle: token-based so the icon reads on both light & dark bars */
 .theme-toggle {
   min-height: 46px;
   min-width: 46px;
@@ -3122,22 +3139,17 @@ html[data-theme="dark"] body::before {
   border: var(--pix-border);
   border-radius: 8px;
   background: var(--color-soft);
-  color: var(--color-lime);
+  color: var(--color-charcoal);
   box-shadow: var(--pix-shadow-sm);
   cursor: pointer;
+  flex: 0 0 auto;
   transition: transform 0.1s ease, background 0.2s ease;
 }
 .theme-toggle:hover {
-  background: rgba(200, 241, 105, 0.16);
+  background: var(--color-lime-soft);
 }
 .theme-toggle:active {
   transform: translate(1px, 1px);
-}
-/* the navbar is a dark arcade bar in both themes, so the toggle is always dark */
-.navbar .theme-toggle {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(200, 241, 105, 0.5);
-  color: var(--color-lime);
 }
 
 /* ============================================================
@@ -3172,4 +3184,26 @@ html[data-theme="dark"] .site .phone-mock *,
 html[data-theme="dark"] .site .floating-health-card,
 html[data-theme="dark"] .site .floating-health-card * {
   color: var(--color-charcoal) !important;
+}
+
+/* /about page — these elements hard-code var(--color-white) as TEXT colour, which
+   flips to near-black in dark mode (the reported "tulisan jadi hitam"). Force
+   readable text + give the white-backed person cards a dark surface. */
+html[data-theme="dark"] .site .future-timeline div,
+html[data-theme="dark"] .site .future-timeline strong,
+html[data-theme="dark"] .site .visual-future p,
+html[data-theme="dark"] .site .about-visual-card,
+html[data-theme="dark"] .site .about-visual-card strong,
+html[data-theme="dark"] .site .about-visual-card span,
+html[data-theme="dark"] .site .person-card,
+html[data-theme="dark"] .site .person-card h3,
+html[data-theme="dark"] .site .person-card p {
+  color: var(--color-charcoal) !important;
+}
+html[data-theme="dark"] .site .person-card {
+  background: var(--color-soft) !important;
+  border-color: var(--color-line) !important;
+}
+html[data-theme="dark"] .site .person-card span {
+  color: #8fe0b4 !important; /* role label stays a readable green accent */
 }

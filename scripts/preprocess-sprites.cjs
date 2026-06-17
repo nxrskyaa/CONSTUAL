@@ -27,11 +27,12 @@ const PORTRAIT_DIR = path.join(OUT_DIR, "portraits");
 
 // key -> source filename + how many frames to keep for the game strip.
 const CHARACTERS = [
-  { key: "siggy", file: "siggy.png", frames: 6 },
+  // player + nxr use the revamped sheets for smoother walk/idle frames
+  { key: "siggy", file: "newcharac/SiggyRevamp.png", frames: 6 },
   { key: "seesac", file: "seesac.png", frames: 4 },
   { key: "siggy_anime", file: "siggy_anime.png", frames: 4 },
   { key: "decka", file: "decka.png", frames: 4 },
-  { key: "nxr", file: "nxr.png", frames: 4 },
+  { key: "nxr", file: "newcharac/nxr_new.png", frames: 6 },
   { key: "rikky", file: "rikky.png", frames: 4 },
   { key: "rizan", file: "rizan.png", frames: 4 },
   { key: "jez", file: "jez.png", frames: 4 },
@@ -50,6 +51,26 @@ const CHARACTERS = [
   { key: "kippo", file: "Kippo.G.png", frames: 4 },
   { key: "hytamm", file: "Hytamm.png", frames: 4 },
   { key: "shin", file: "Shin.png", frames: 4 },
+
+  // --- new roster (D:/characters/newcharac) ---
+  { key: "habex", file: "newcharac/habex.png", frames: 4 },
+  { key: "moctx", file: "newcharac/moctx.png", frames: 4 },
+  { key: "absol", file: "newcharac/absol.png", frames: 4 },
+  { key: "bien", file: "newcharac/BIEN.png", frames: 4 },
+  { key: "babass", file: "newcharac/babass.png", frames: 4 },
+  { key: "chala", file: "newcharac/Chala.png", frames: 4 },
+  { key: "flylucifer", file: "newcharac/Fly Lucifer.png", frames: 4 },
+  { key: "kaidanzer", file: "newcharac/Kai Danzer.png", frames: 4 },
+  { key: "kamalz", file: "newcharac/kamalz.png", frames: 4 },
+  { key: "ng", file: "newcharac/NG.png", frames: 4 },
+  { key: "omartuta", file: "newcharac/omartuta.png", frames: 4 },
+  { key: "online", file: "newcharac/online.png", frames: 4 },
+  { key: "rz", file: "newcharac/rz.png", frames: 4 },
+  { key: "skyzee", file: "newcharac/Skyzee.png", frames: 4 },
+  { key: "stanelope", file: "newcharac/stanelope.png", frames: 4 },
+  { key: "starknight", file: "newcharac/starknight.png", frames: 4 },
+  { key: "subur", file: "newcharac/Subur.png", frames: 4 },
+  { key: "travis", file: "newcharac/travis.png", frames: 4 },
 ];
 
 // Single-image landmark buildings + flag -> transparent trimmed PNGs.
