@@ -117,6 +117,19 @@ export const SPRITES: Record<string, CharSprite> = {
   shen: { key: "shen", file: "characters/shen.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   strobely: { key: "strobely", file: "characters/strobely.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   deell: { key: "deell", file: "characters/deell.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+
+  // --- newest requested roster ---
+  baemax: { key: "baemax", file: "characters/baemax.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  billiebed: { key: "billiebed", file: "characters/billiebed.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  batagor: { key: "batagor", file: "characters/batagor.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  icebear: { key: "icebear", file: "characters/icebear.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  dikzzy: { key: "dikzzy", file: "characters/dikzzy.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  nadsar: { key: "nadsar", file: "characters/nadsar.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  skylaaark: { key: "skylaaark", file: "characters/skylaaark.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  oyeng: { key: "oyeng", file: "characters/oyeng.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  juggernaut: { key: "juggernaut", file: "characters/juggernaut.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  keybi: { key: "keybi", file: "characters/keybi.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  callmehann: { key: "callmehann", file: "characters/callmehann.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
 };
 
 export const ALL_SPRITES: CharSprite[] = Object.values(SPRITES);

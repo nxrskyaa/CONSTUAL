@@ -22,7 +22,7 @@ export default class PreloadScene extends Phaser.Scene {
     // stall the loader when the file count exceeds it and several resolve from
     // cache at once (inflight drains to 0 while files remain in the list and the
     // queue is never re-pumped). Loading everything in one batch avoids that.
-    this.load.maxParallelDownloads = ALL_SPRITES.length + 16;
+    this.load.maxParallelDownloads = ALL_SPRITES.length + 40;
 
     const { width, height } = this.scale;
     const cx = width / 2;
@@ -70,6 +70,18 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("lm_flag", "/buildings/ritualflag.png");
     // pixel-art reference buildings (transparent)
     for (let i = 1; i <= 9; i++) this.load.image(`b${i}`, `/buildings/b${i}.png`);
+
+    this.load.image("env_worldtiles", "/environment/worldtiles.png");
+    this.load.image("env_pond", "/environment/pond.png");
+    this.load.image("env_tree", "/environment/tree.png");
+    this.load.image("env_building_1", "/environment/building_1.png");
+    this.load.image("env_building_2", "/environment/building_2.png");
+    this.load.image("env_building_3", "/environment/building_3.png");
+    this.load.image("env_grass_1", "/environment/grass_1.png");
+    this.load.image("env_grass_2", "/environment/grass_2.png");
+    this.load.image("env_grass_3", "/environment/grass_3.png");
+    this.load.image("env_fish_rod", "/environment/fish_rod.png");
+    this.load.image("env_fish_bobber", "/environment/fish_bobber.png");
   }
 
   create(): void {

@@ -580,6 +580,109 @@ export const NPCS: NpcDef[] = [
       "Be kind to your future self.",
     ],
   },
+
+  // ---------------------------------------------------------------------------
+  // Requested roster from D:/characters/newcharac
+  // ---------------------------------------------------------------------------
+  {
+    key: "baemax", name: "Baemax", spriteKey: "baemax", area: "forest",
+    tileX: 6, tileY: 12, wander: true, zoneId: null, accent: 0xc8f169,
+    dialog: [
+      "Baemax online. Tiny repairs count: stretch, hydrate, breathe.",
+      "If your shoulders feel loaded, pause for one minute and reset.",
+      "Health maintenance is not dramatic. It is consistent.",
+    ],
+  },
+  {
+    key: "billiebed", name: "Billiebed", spriteKey: "billiebed", area: "coast",
+    tileX: 5, tileY: 30, wander: false, activity: "sit", zoneId: null, accent: 0x9fd0ff,
+    dialog: [
+      "Billiebed here. Rest is part of the build cycle.",
+      "A real break works better than pretending to rest while scrolling.",
+      "Sleep well, then come back sharper.",
+    ],
+  },
+  {
+    key: "batagor", name: "Batagor", spriteKey: "batagor", area: "desert",
+    tileX: 43, tileY: 10, wander: false, activity: "gather", zoneId: null, accent: 0xffb35c,
+    dialog: [
+      "Batagor checking in from the bazaar. Snack smart, not random.",
+      "Protein, fiber, and water help your energy last longer than sugar spikes.",
+      "Good food makes better focus.",
+    ],
+  },
+  {
+    key: "icebear", name: "Icebear", spriteKey: "icebear", area: "coast",
+    tileX: 6, tileY: 24, wander: false, activity: "fish", zoneId: null, accent: 0x6ee7ff,
+    dialog: [
+      "Icebear waits by the pond. Patience is a health skill too.",
+      "Slow breathing can bring the body out of fight-or-flight mode.",
+      "Stay calm, cast clean, hydrate often.",
+    ],
+  },
+  {
+    key: "dikzzy", name: "Dikzzy", spriteKey: "dikzzy", area: "forest",
+    tileX: 19, tileY: 11, wander: true, zoneId: null, accent: 0x7ee0a0,
+    dialog: [
+      "Dikzzy here. Feeling dizzy after long sessions? Check basics first.",
+      "Water, meals, sleep, and screen breaks matter more than another refresh.",
+      "If symptoms are severe or keep returning, ask a professional.",
+    ],
+  },
+  {
+    key: "nadsar", name: "Nadsar", spriteKey: "nadsar", area: "mystic",
+    tileX: 41, tileY: 26, wander: false, activity: "meditate", zoneId: null, accent: 0xc792ff,
+    dialog: [
+      "Nadsar speaks softly. Your nervous system likes rhythm.",
+      "Try steady sleep, steady meals, and steady movement.",
+      "Calm is built by repetition.",
+    ],
+  },
+  {
+    key: "skylaaark", name: "Skylaaark", spriteKey: "skylaaark", area: "coast",
+    tileX: 18, tileY: 27, wander: true, zoneId: null, accent: 0x73b4ec,
+    dialog: [
+      "Skylaaark here. Look up from the screen once in a while.",
+      "Distance vision, sunlight, and a short walk help your eyes and mood.",
+      "The sky is free alpha.",
+    ],
+  },
+  {
+    key: "oyeng", name: "Oyeng", spriteKey: "oyeng", area: "plaza",
+    tileX: 24, tileY: 21, wander: true, zoneId: null, accent: 0xffd27a,
+    dialog: [
+      "Oyeng says: do not skip water just because you are busy.",
+      "Your brain notices dehydration before your timeline does.",
+      "Sip, move, repeat.",
+    ],
+  },
+  {
+    key: "juggernaut", name: "Juggernaut", spriteKey: "juggernaut", area: "desert",
+    tileX: 45, tileY: 8, wander: false, activity: "train", zoneId: null, accent: 0xff8f5c,
+    dialog: [
+      "Juggernaut trains slow and steady.",
+      "Strength does not need ego: bodyweight reps, walking, and consistency count.",
+      "Build the body like infrastructure.",
+    ],
+  },
+  {
+    key: "keybi", name: "Keybi", spriteKey: "keybi", area: "mystic",
+    tileX: 37, tileY: 31, wander: false, activity: "gather", zoneId: null, accent: 0x9aa6ff,
+    dialog: [
+      "Keybi keeps the keys to better habits.",
+      "Lock in one routine: sleep time, walk time, or screen break time.",
+      "One reliable habit can unlock the next.",
+    ],
+  },
+  {
+    key: "callmehann", name: "Callmehann", spriteKey: "callmehann", area: "plaza",
+    tileX: 20, tileY: 19, wander: true, zoneId: null, accent: 0xff9bd2,
+    dialog: [
+      "Callmehann here. Check on your friends, not only the charts.",
+      "Real connection can lower stress and make hard weeks easier.",
+      "Call someone after this quest.",
+    ],
+  },
 ];
 
 /** Dialog lines for an NPC, pulling from its zone when it's a quest-giver. */
