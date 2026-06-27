@@ -36,6 +36,7 @@ interface Npc {
   fishLine?: Phaser.GameObjects.Graphics;
   bobber?: Phaser.GameObjects.Image;
   fishingRod?: Phaser.GameObjects.Image;
+  fishSide?: 1 | -1;
 }
 
 export default class MainWorldScene extends Phaser.Scene {
@@ -54,6 +55,7 @@ export default class MainWorldScene extends Phaser.Scene {
   private clouds!: CloudSystem;
   private leafEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private waterTiles: Phaser.GameObjects.TileSprite[] = [];
+  private pondEffectBounds?: Phaser.Geom.Rectangle;
   private interactLocked = false;
   private facing: 1 | -1 = 1;
 
@@ -370,6 +372,10 @@ export default class MainWorldScene extends Phaser.Scene {
     return tx >= POND.tx && tx < POND.tx + POND.tw && ty >= POND.ty && ty < POND.ty + POND.th;
   }
 
+  private nearPondTile(tx: number, ty: number, pad = 2): boolean {
+    return tx >= POND.tx - pad && tx < POND.tx + POND.tw + pad && ty >= POND.ty - pad && ty < POND.ty + POND.th + pad;
+  }
+
   // pond bounds in world px (with a margin) so NPCs never wander into the water
   private inPondWorld(x: number, y: number): boolean {
     const px = POND.tx * TILE_SIZE;
@@ -497,9 +503,21 @@ export default class MainWorldScene extends Phaser.Scene {
     const ph = POND.th * TILE_SIZE;
     const cx = px + pw / 2;
     const cy = py + ph / 2;
+    this.pondEffectBounds = new Phaser.Geom.Rectangle(px + 22, py + 18, pw - 44, ph - 36);
 
     if (this.textures.exists("env_pond")) {
       this.add.image(cx, cy + 5, "env_pond").setOrigin(0.5).setScale(0.93).setDepth(-6);
+      const surface = this.add.graphics().setDepth(-5);
+      surface.fillStyle(0x9fdcff, 0.12).fillEllipse(cx, cy + 3, pw * 0.72, ph * 0.46);
+      surface.lineStyle(1, 0xd8f5ff, 0.22).strokeEllipse(cx, cy + 1, pw * 0.58, ph * 0.32);
+      this.tweens.add({
+        targets: surface,
+        alpha: { from: 0.45, to: 0.78 },
+        duration: 2600,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
     } else {
     // shoreline: sandy bank ring + darker wet edge, drawn under the water
     const bank = this.add.graphics().setDepth(-8);
@@ -537,15 +555,39 @@ export default class MainWorldScene extends Phaser.Scene {
       delay: 400,
       loop: true,
       callback: () => {
-        if (this.waterTiles.length === 0) return;
-        const w = Phaser.Utils.Array.GetRandom(this.waterTiles);
-        const x = w.x + Phaser.Math.Between(10, w.width - 10);
-        const y = w.y + Phaser.Math.Between(10, w.height - 10);
+        let x = 0;
+        let y = 0;
+        if (this.waterTiles.length > 0) {
+          const w = Phaser.Utils.Array.GetRandom(this.waterTiles);
+          x = w.x + Phaser.Math.Between(10, w.width - 10);
+          y = w.y + Phaser.Math.Between(10, w.height - 10);
+        } else if (this.pondEffectBounds) {
+          x = Phaser.Math.Between(this.pondEffectBounds.left, this.pondEffectBounds.right);
+          y = Phaser.Math.Between(this.pondEffectBounds.top, this.pondEffectBounds.bottom);
+        } else {
+          return;
+        }
         const s = this.add.graphics();
         s.fillStyle(0xaaddff, 0.85).fillCircle(0, 0, Phaser.Math.Between(1, 3));
         s.setPosition(x, y).setDepth(1);
         this.tweens.add({ targets: s, y: y - 8, alpha: 0, duration: Phaser.Math.Between(800, 1400), ease: "Power1", onComplete: () => s.destroy() });
+        if (Phaser.Math.FloatBetween(0, 1) < 0.28) this.spawnPondRipple(x, y);
       },
+    });
+  }
+
+  private spawnPondRipple(x: number, y: number): void {
+    const ripple = this.add.graphics().setPosition(x, y).setDepth(0);
+    ripple.lineStyle(1.5, 0xd8f5ff, 0.5).strokeEllipse(0, 0, 16, 6);
+    ripple.setScale(0.2);
+    this.tweens.add({
+      targets: ripple,
+      scaleX: 1.7,
+      scaleY: 1.25,
+      alpha: 0,
+      duration: 1200,
+      ease: "Sine.easeOut",
+      onComplete: () => ripple.destroy(),
     });
   }
 
@@ -627,7 +669,7 @@ export default class MainWorldScene extends Phaser.Scene {
     const tryTree = (tx: number, ty: number) => {
       const a = this.areaOf(tx, ty);
       if (a === "plaza" || a === "desert" || a === "mystic") return;
-      if (this.inPond(tx, ty)) return;
+      if (this.nearPondTile(tx, ty, 2)) return;
       const key = this.textures.exists("env_tree") ? "env_tree" : Phaser.Math.Between(0, 1) ? "tree" : "tree2";
       sway.push(this.addSolidImage(tx * ts + ts / 2, ty * ts + ts, key, 1, 0.3, 0.16));
     };
@@ -663,7 +705,7 @@ export default class MainWorldScene extends Phaser.Scene {
       for (let i = 0; i < count; i++) {
         const tx = Phaser.Math.Between(2, MAP_W - 2);
         const ty = Phaser.Math.Between(2, MAP_H - 2);
-        if (this.areaOf(tx, ty) === "plaza" || this.inPond(tx, ty)) continue;
+        if (this.areaOf(tx, ty) === "plaza" || this.nearPondTile(tx, ty, 1)) continue;
         const img = this.add.image(tx * ts, ty * ts, key).setOrigin(0.5, 1);
         img.setDepth(ty * ts);
       }
@@ -675,7 +717,7 @@ export default class MainWorldScene extends Phaser.Scene {
       for (let i = 0; i < 90; i++) {
         const tx = Phaser.Math.Between(2, MAP_W - 2);
         const ty = Phaser.Math.Between(2, MAP_H - 2);
-        if (this.areaOf(tx, ty) === "plaza" || this.inPond(tx, ty)) continue;
+        if (this.areaOf(tx, ty) === "plaza" || this.nearPondTile(tx, ty, 1)) continue;
         const key = Phaser.Utils.Array.GetRandom(["env_grass_1", "env_grass_2", "env_grass_3"]);
         const img = this.add.image(tx * ts + Phaser.Math.Between(-8, 8), ty * ts + Phaser.Math.Between(4, 15), key).setOrigin(0.5, 1);
         img.setDepth(ty * ts - 1).setScale(Phaser.Math.FloatBetween(0.7, 1.15));
@@ -698,7 +740,7 @@ export default class MainWorldScene extends Phaser.Scene {
     for (let i = 0; i < 50; i++) {
       const tx = Phaser.Math.Between(2, MAP_W - 2);
       const ty = Phaser.Math.Between(2, MAP_H - 2);
-      if (this.inPond(tx, ty)) continue;
+      if (this.nearPondTile(tx, ty, 1)) continue;
       const b = this.add.image(tx * ts, ty * ts, "blade").setOrigin(0.5, 1).setDepth(ty * ts - 1).setScale(Phaser.Math.FloatBetween(0.8, 1.4));
       this.tweens.add({ targets: b, angle: Phaser.Math.FloatBetween(6, 12), duration: Phaser.Math.Between(1200, 2200), yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     }
@@ -706,25 +748,32 @@ export default class MainWorldScene extends Phaser.Scene {
 
   private spawnBuildings(): void {
     const ts = TILE_SIZE;
-    // Constual HQ stays hand-drawn (it's the brand landmark), dead-centered.
-    const hq = createBuilding(this, "hq", 25 * ts, 13 * ts);
-    this.addStaticCollider(hq.x, hq.y - 48, 118, 96);
+    // Updated Constual HQ from the environment pack, with the old handmade
+    // landmark as a fallback if the generated asset is missing.
+    if (this.textures.exists("env_constual_hq")) {
+      this.addBuildingImage(25 * ts, 13 * ts, "env_constual_hq", 0.74, 0.66, 0.36);
+    } else {
+      const hq = createBuilding(this, "hq", 25 * ts, 13 * ts);
+      this.addStaticCollider(hq.x, hq.y - 48, 118, 96);
+    }
 
     // Prefer the updated D:/assetsupdate building art, with older b1-b9 as fallback fill.
     const refs: [string, number, number][] = [
       ["env_building_1", 9, 9], ["b5", 16, 8], // forest
       ["env_building_2", 9, 33], ["b8", 17, 34], // coast
       ["env_building_3", 41, 9], ["b7", 34, 8], // desert
+      ["env_pusat_korupsi", 31, 14], ["env_dprsampah", 46, 25], // new civic landmarks
       ["b4", 40, 30], ["env_building_1", 32, 33], ["b9", 44, 35], // mystic
     ];
     for (const [key, tx, ty] of refs) this.addBuildingImage(tx * ts, ty * ts, key, 0.66);
   }
 
-  private addBuildingImage(x: number, y: number, key: string, scale: number): void {
+  private addBuildingImage(x: number, y: number, key: string, scale: number, bodyW = 0.72, bodyH = 0.42): void {
+    if (!this.textures.exists(key)) return;
     const img = this.add.image(x, y, key).setOrigin(0.5, 1).setScale(scale);
     img.setDepth(y);
-    const w = img.displayWidth * 0.72;
-    const h = img.displayHeight * 0.42;
+    const w = img.displayWidth * bodyW;
+    const h = img.displayHeight * bodyH;
     this.addStaticCollider(x, y - h / 2, w, h);
   }
 
@@ -897,21 +946,26 @@ export default class MainWorldScene extends Phaser.Scene {
     const len = Math.hypot(dx, dy) || 1;
     dx /= len;
     dy /= len;
-    const cast = 78;
-    const bx = hx + dx * cast;
-    const by = hy - 16 + dy * cast; // -16 lifts the cast toward the rod tip
-    npc.visual.setFlipX(dx < 0); // face the water
+    const side: 1 | -1 = dx < 0 ? -1 : 1;
+    const cast = 92;
+    const waterX = POND.tx * TILE_SIZE;
+    const waterY = POND.ty * TILE_SIZE;
+    const waterW = POND.tw * TILE_SIZE;
+    const waterH = POND.th * TILE_SIZE;
+    const bx = Phaser.Math.Clamp(hx + dx * cast, waterX + 24, waterX + waterW - 24);
+    const by = Phaser.Math.Clamp(hy + dy * cast - 6, waterY + 22, waterY + waterH - 22);
+    npc.fishSide = side;
+    npc.visual.setFlipX(side < 0); // face the water
     if (this.textures.exists("env_fish_rod")) {
-      const side = dx < 0 ? -1 : 1;
       npc.fishingRod = this.add
-        .image(hx + side * 18, hy - 30, "env_fish_rod")
-        .setOrigin(0.5, 0.82)
-        .setScale(0.54)
+        .image(hx + side * 13, hy - 28, "env_fish_rod")
+        .setOrigin(0.86, 0.82)
+        .setScale(0.45)
         .setFlipX(side > 0)
         .setDepth(hy + 1);
     }
     npc.bobber = this.textures.exists("env_fish_bobber")
-      ? this.add.image(bx, by, "env_fish_bobber").setScale(0.18).setDepth(2)
+      ? this.add.image(bx, by, "env_fish_bobber").setScale(0.14).setDepth(2)
       : this.add.image(bx, by, "fx_dot").setTint(0xff5d6c).setScale(2.2).setDepth(2);
     npc.fishLine = this.add.graphics().setDepth(npc.container.y - 1);
     this.tweens.add({ targets: npc.bobber, y: by - 3, duration: 1300, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
@@ -1502,15 +1556,17 @@ export default class MainWorldScene extends Phaser.Scene {
       n.bubble.setPosition(n.container.x, n.container.y - NPC_TOP - 12).setDepth(n.container.y + 1);
       // redraw the fishing line from the angler's hand to the bobber
       if (n.fishLine && n.bobber) {
-        const side = n.visual.flipX ? -1 : 1;
+        const side = n.fishSide ?? (n.visual.flipX ? -1 : 1);
+        const handX = n.container.x + side * 13;
+        const handY = n.container.y - 28;
+        const lineStartX = handX + side * 34;
+        const lineStartY = handY - 34;
         if (n.fishingRod) {
           n.fishingRod
-            .setPosition(n.container.x + side * 18, n.container.y - 30)
+            .setPosition(handX, handY)
             .setFlipX(side > 0)
             .setDepth(n.container.y + 1);
         }
-        const lineStartX = n.fishingRod ? n.fishingRod.x + side * 22 : n.container.x + side * 16;
-        const lineStartY = n.fishingRod ? n.fishingRod.y - 18 : n.container.y - 30;
         n.fishLine.clear();
         n.fishLine.lineStyle(1.5, 0xffffff, 0.75);
         n.fishLine.beginPath();

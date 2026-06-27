@@ -32,6 +32,16 @@ function isMagenta(r, g, b) {
   return Math.abs(255 - r) + Math.abs(g) + Math.abs(255 - b) <= MAGENTA_TOL;
 }
 
+function isMagentaLike(r, g, b, aggressive = false) {
+  if (isMagenta(r, g, b)) return true;
+  if (!aggressive) return false;
+  return r > 145 && b > 145 && g < 155 && r + b > g * 2 + 120;
+}
+
+function isPurpleFringe(r, g, b) {
+  return r > 65 && b > 70 && g < 58 && b > g + 45 && r > g + 35;
+}
+
 function cropSquare(png, size = 720, cx = png.width / 2, cy = png.height / 2) {
   const s = Math.min(size, png.width, png.height);
   const x0 = Math.max(0, Math.min(png.width - s, Math.round(cx - s / 2)));
@@ -76,13 +86,15 @@ function resizeBox(png, box, outW, outH, tint) {
   return out;
 }
 
-function keyOutAndBounds(png) {
+function keyOutAndBounds(png, options = {}) {
+  const aggressivePink = Boolean(options.aggressivePink);
+  const dropPurpleFringe = Boolean(options.dropPurpleFringe);
   let minX = png.width, minY = png.height, maxX = -1, maxY = -1;
   for (let y = 0; y < png.height; y++) {
     for (let x = 0; x < png.width; x++) {
       const i = (y * png.width + x) * 4;
       const r = png.data[i], g = png.data[i + 1], b = png.data[i + 2], a = png.data[i + 3];
-      if (a < 20 || isMagenta(r, g, b)) {
+      if (a < 20 || isMagentaLike(r, g, b, aggressivePink) || (dropPurpleFringe && isPurpleFringe(r, g, b))) {
         png.data[i + 3] = 0;
         continue;
       }
@@ -125,9 +137,9 @@ function resizeNearest(png, box, outW, outH) {
   return out;
 }
 
-function processObject(sourceName, outName, targetLongest) {
+function processObject(sourceName, outName, targetLongest, options = {}) {
   const png = read(sourceName);
-  const box = keyOutAndBounds(png);
+  const box = keyOutAndBounds(png, options);
   const scale = targetLongest / Math.max(box.w, box.h);
   const outW = Math.max(1, Math.round(box.w * scale));
   const outH = Math.max(1, Math.round(box.h * scale));
@@ -153,7 +165,7 @@ function processSet(sourceName, cells, targetLongest) {
         cell.data[di + 3] = png.data[si + 3];
       }
     }
-    const box = keyOutAndBounds(cell);
+    const box = keyOutAndBounds(cell, { aggressivePink: true });
     const scale = targetLongest / Math.max(box.w, box.h);
     const outW = Math.max(1, Math.round(box.w * scale));
     const outH = Math.max(1, Math.round(box.h * scale));
@@ -201,10 +213,13 @@ function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   makeWorldTiles();
   processObject("kolam.png", "pond.png", 300);
-  processObject("pohon.png", "tree.png", 118);
+  processObject("pohon.png", "tree.png", 118, { aggressivePink: true, dropPurpleFringe: true });
   processObject("bangunan 1.png", "building_1.png", 230);
   processObject("bangunan 2.png", "building_2.png", 230);
   processObject("bangunan 3.png", "building_3.png", 210);
+  processObject("BARU/CONSTUAL.png", "constual_hq.png", 300, { aggressivePink: true });
+  processObject("BARU/dprsampah.png", "dprsampah.png", 230, { aggressivePink: true });
+  processObject("BARU/PUSAT KORUPSI.png", "pusat_korupsi.png", 250, { aggressivePink: true });
   processSet("rumput.png", {
     rows: 1,
     cols: 3,

@@ -77,6 +77,9 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("env_building_1", "/environment/building_1.png");
     this.load.image("env_building_2", "/environment/building_2.png");
     this.load.image("env_building_3", "/environment/building_3.png");
+    this.load.image("env_constual_hq", "/environment/constual_hq.png");
+    this.load.image("env_dprsampah", "/environment/dprsampah.png");
+    this.load.image("env_pusat_korupsi", "/environment/pusat_korupsi.png");
     this.load.image("env_grass_1", "/environment/grass_1.png");
     this.load.image("env_grass_2", "/environment/grass_2.png");
     this.load.image("env_grass_3", "/environment/grass_3.png");
