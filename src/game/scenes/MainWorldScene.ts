@@ -764,22 +764,22 @@ export default class MainWorldScene extends Phaser.Scene {
     // Updated Constual HQ from the environment pack, with the old handmade
     // landmark as a fallback if the generated asset is missing.
     if (this.textures.exists("env_constual_hq")) {
-      this.addBuildingImage(25 * ts, 13 * ts, "env_constual_hq", 0.74, 0.66, 0.36);
+      this.addBuildingImage(25 * ts, 13 * ts, "env_constual_hq", 0.5, 0.58, 0.3);
     } else {
       const hq = createBuilding(this, "hq", 25 * ts, 13 * ts);
       this.addStaticCollider(hq.x, hq.y - 48, 118, 96);
     }
 
     // Keep landmarks spaced out so NPC tags and bodies stay readable.
-    const refs: [string, number, number][] = [
-      ["env_building_2", 9, 34], ["b8", 18, 36], // coast
-      ["env_building_3", 39, 6], // desert
-      ["env_pusat_korupsi", 47, 22], ["env_dprsampah", 46, 36], // new civic landmarks
-      ["b4", 42, 34], // mystic edge
+    const refs: [string, number, number, number, number?, number?][] = [
+      ["env_building_2", 9, 34, 0.52, 0.68, 0.34], ["b8", 18, 36, 0.56], // coast
+      ["env_building_3", 39, 6, 0.5, 0.66, 0.34], // desert
+      ["env_pusat_korupsi", 47, 22, 0.5, 0.62, 0.34], ["env_dprsampah", 46, 36, 0.48, 0.62, 0.34], // new civic landmarks
+      ["b4", 42, 34, 0.54], // mystic edge
     ];
-    for (const [key, tx, ty] of refs) {
+    for (const [key, tx, ty, scale, bodyW, bodyH] of refs) {
       if (this.nearNpcTile(tx, ty, 2)) continue;
-      this.addBuildingImage(tx * ts, ty * ts, key, 0.66);
+      this.addBuildingImage(tx * ts, ty * ts, key, scale, bodyW, bodyH);
     }
   }
 
