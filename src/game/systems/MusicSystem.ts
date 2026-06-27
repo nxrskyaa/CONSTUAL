@@ -26,8 +26,8 @@ export class MusicSystem {
   private step = 0;
   private muted = false;
   private started = false;
-  private readonly bpm = 64; // slower, warmer lo-fi
-  private readonly volume = 0.14;
+  private readonly bpm = 58; // slower, warmer lo-fi
+  private readonly volume = 0.12;
 
   /** Start (or resume) playback. Call from a user gesture. */
   start(): void {
@@ -42,8 +42,8 @@ export class MusicSystem {
       // a gentle lowpass rolls off the highs for a soft, warm lo-fi tone
       this.lp = this.ctx.createBiquadFilter();
       this.lp.type = "lowpass";
-      this.lp.frequency.value = 1550;
-      this.lp.Q.value = 0.65;
+      this.lp.frequency.value = 1200;
+      this.lp.Q.value = 0.7;
       this.master.connect(this.lp);
       this.lp.connect(this.ctx.destination);
     }
@@ -107,24 +107,24 @@ export class MusicSystem {
     const arp = step % 8;
 
     // mellow arpeggio (triangle) on the eighth-notes only — sparse + soft
-    if (arp % 2 === 0) {
+    if (arp === 2 || arp === 6) {
       const idx = (arp / 2) % chord.notes.length;
       const leadSemi = chord.notes[idx] + 12;
       // notes overlap a little (long release) so the line feels smooth, not plucky
-      this.tone(freq(leadSemi), time, sixteenth * 3.4, "triangle", 0.08);
+      this.tone(freq(leadSemi), time, sixteenth * 3.6, "sine", 0.045);
     }
 
     // a soft swung grace note near the end of the bar for a lo-fi lilt
-    if (arp === 6) this.tone(freq(chord.notes[chord.notes.length - 1] + 24), time, sixteenth * 2.2, "sine", 0.035);
+    if (arp === 7) this.tone(freq(chord.notes[chord.notes.length - 1] + 24), time, sixteenth * 2.4, "sine", 0.02);
 
     // warm sine bass + a sustained pad chord on each chord change
     if (arp === 0) {
-      this.tone(freq(chord.root), time, sixteenth * 7.5, "sine", 0.32);
-      for (const n of chord.notes) this.tone(freq(n), time, sixteenth * 7.5, "sine", 0.04);
+      this.tone(freq(chord.root), time, sixteenth * 7.5, "sine", 0.26);
+      for (const n of chord.notes) this.tone(freq(n), time, sixteenth * 7.5, "sine", 0.045);
     }
 
     // one soft, airy hat per chord (very light)
-    if (arp === 4) this.hat(time, 0.02);
+    if (step % 16 === 4) this.hat(time, 0.018);
   }
 
   private tone(f: number, time: number, dur: number, type: OscillatorType, peak: number): void {
@@ -150,10 +150,10 @@ export class MusicSystem {
     const src = this.ctx.createBufferSource();
     src.buffer = buffer;
     const g = this.ctx.createGain();
-    g.gain.value = 0.018;
+    g.gain.value = 0.011;
     const hp = this.ctx.createBiquadFilter();
     hp.type = "highpass";
-    hp.frequency.value = 7600;
+    hp.frequency.value = 6200;
     src.connect(hp);
     hp.connect(g);
     g.connect(this.master);

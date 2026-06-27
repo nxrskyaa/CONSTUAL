@@ -39,6 +39,7 @@ export default class MainWorldScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Container;
   private playerBody!: Phaser.Physics.Arcade.Body;
   private playerVisual!: Phaser.GameObjects.Sprite;
+  private playerKey = PLAYER_KEY;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
   private keyShift!: Phaser.Input.Keyboard.Key;
@@ -116,11 +117,14 @@ export default class MainWorldScene extends Phaser.Scene {
     });
     const offD = gameBridge.on("dialog:hide", () => (this.interactLocked = false));
     const offQ = gameBridge.on("quiz:hide", () => (this.interactLocked = false));
+    const offPlayer = gameBridge.on("player:select", (p) => this.setPlayerCharacter(p.key));
 
     const cachedWallet = this.registry.get("wallet") as WalletState | undefined;
     if (cachedWallet) this.onWallet(cachedWallet);
     const cachedHud = this.registry.get("hud") as HudPayload | undefined;
     if (cachedHud) this.onHud(cachedHud);
+    const cachedPlayerKey = this.registry.get("playerKey") as string | undefined;
+    if (cachedPlayerKey) this.setPlayerCharacter(cachedPlayerKey);
 
     // keep camera + HUD correct on viewport resize
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
@@ -136,6 +140,7 @@ export default class MainWorldScene extends Phaser.Scene {
       offResult();
       offD();
       offQ();
+      offPlayer();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
     });
   }
@@ -764,7 +769,7 @@ export default class MainWorldScene extends Phaser.Scene {
     // Updated Constual HQ from the environment pack, with the old handmade
     // landmark as a fallback if the generated asset is missing.
     if (this.textures.exists("env_constual_hq")) {
-      this.addBuildingImage(25 * ts, 13 * ts, "env_constual_hq", 0.5, 0.58, 0.3);
+      this.addBuildingImage(25 * ts, 13 * ts, "env_constual_hq", 0.64, 0.58, 0.3);
     } else {
       const hq = createBuilding(this, "hq", 25 * ts, 13 * ts);
       this.addStaticCollider(hq.x, hq.y - 48, 118, 96);
@@ -772,10 +777,10 @@ export default class MainWorldScene extends Phaser.Scene {
 
     // Keep landmarks spaced out so NPC tags and bodies stay readable.
     const refs: [string, number, number, number, number?, number?][] = [
-      ["env_building_2", 9, 34, 0.52, 0.68, 0.34], ["b8", 18, 36, 0.56], // coast
-      ["env_building_3", 39, 6, 0.5, 0.66, 0.34], // desert
-      ["env_pusat_korupsi", 47, 22, 0.5, 0.62, 0.34], ["env_dprsampah", 46, 36, 0.48, 0.62, 0.34], // new civic landmarks
-      ["b4", 42, 34, 0.54], // mystic edge
+      ["env_building_2", 9, 35, 0.72, 0.66, 0.32], ["b8", 18, 36, 0.64], // coast
+      ["env_building_3", 39, 6, 0.68, 0.66, 0.34], // desert
+      ["env_pusat_korupsi", 47, 22, 0.78, 0.58, 0.32], ["env_dprsampah", 46, 36, 0.82, 0.58, 0.32], // new civic landmarks
+      ["b4", 42, 34, 0.62], // mystic edge
     ];
     for (const [key, tx, ty, scale, bodyW, bodyH] of refs) {
       if (this.nearNpcTile(tx, ty, 2)) continue;
@@ -805,9 +810,10 @@ export default class MainWorldScene extends Phaser.Scene {
     // Single consistent frame in a container; the container holds the physics
     // body so the visual never rescales. Idle/walk life comes from a smooth
     // sine bob applied to the visual in update() (pure position, no size change).
-    const visual = this.add.sprite(0, 0, PLAYER_KEY, 5).setOrigin(0.5, 0.82).setScale(PLAYER_SCALE);
-    visual.play(animKey(PLAYER_KEY, "idle"));
+    const key = this.playerKey;
+    const visual = this.add.sprite(0, 0, key, 0).setOrigin(0.5, 0.82).setScale(this.getPlayerScale(key));
     this.playerVisual = visual;
+    this.playPlayerAnim("idle");
 
     const c = this.add.container(25 * TILE_SIZE, 24 * TILE_SIZE, [visual]);
     this.physics.world.enable(c);
@@ -817,6 +823,35 @@ export default class MainWorldScene extends Phaser.Scene {
     body.setCollideWorldBounds(true);
     this.player = c;
     this.playerBody = body;
+  }
+
+  private getPlayerScale(key: string): number {
+    if (key === "siggy") return PLAYER_SCALE;
+    if (key === "online" || key === "tutubear" || key === "baemax" || key === "juggernaut") return 0.28;
+    return 0.32;
+  }
+
+  private playerAnimKey(kind: "idle" | "walk" | "run" | "interact" | "celebrate" | "sit"): string {
+    const requested = animKey(this.playerKey, kind);
+    if (this.anims.exists(requested)) return requested;
+    const walk = animKey(this.playerKey, "walk");
+    if ((kind === "run" || kind === "walk") && this.anims.exists(walk)) return walk;
+    const idle = animKey(this.playerKey, "idle");
+    return this.anims.exists(idle) ? idle : requested;
+  }
+
+  private playPlayerAnim(kind: "idle" | "walk" | "run" | "interact" | "celebrate" | "sit"): void {
+    if (!this.playerVisual) return;
+    const key = this.playerAnimKey(kind);
+    if (this.playerVisual.anims.currentAnim?.key !== key) this.playerVisual.play(key, true);
+  }
+
+  private setPlayerCharacter(key: string): void {
+    if (!this.textures.exists(key)) return;
+    this.playerKey = key;
+    if (!this.playerVisual) return;
+    this.playerVisual.setTexture(key, 0).setScale(this.getPlayerScale(key)).setFlipX(this.facing === -1);
+    this.playPlayerAnim("idle");
   }
 
   // Waving Ritual flag at the world center.
@@ -1466,14 +1501,12 @@ export default class MainWorldScene extends Phaser.Scene {
     const running = this.keyShift.isDown;
     if (moving) {
       // play the 2-frame walk/run cycle + a springy hop & lean for juice
-      const key = animKey(PLAYER_KEY, running ? "run" : "walk");
-      if (this.playerVisual.anims.currentAnim?.key !== key) this.playerVisual.play(key, true);
+      this.playPlayerAnim(running ? "run" : "walk");
       const phase = Math.sin(t * (running ? 0.026 : 0.02));
       this.playerVisual.y = -Math.abs(phase) * (running ? 7 : 5);
       this.playerVisual.setRotation(phase * 0.06 * (this.facing === -1 ? -1 : 1));
     } else {
-      const idle = animKey(PLAYER_KEY, "idle");
-      if (this.playerVisual.anims.currentAnim?.key !== idle) this.playerVisual.play(idle, true);
+      this.playPlayerAnim("idle");
       this.playerVisual.y = -Math.abs(Math.sin(t * 0.004)) * 1.6; // soft breathing
       this.playerVisual.setRotation(0);
     }

@@ -56,6 +56,7 @@ export type GameEvents = {
   "hud:update": HudPayload;
   "tx:result": TxResultPayload;
   "zone:enter": { zoneId: number };
+  "player:select": { key: string };
 
   // Phaser -> React
   "game:ready": void;

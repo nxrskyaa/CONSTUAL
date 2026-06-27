@@ -7,7 +7,7 @@ import "./game.css";
 import { gameBridge, type DialogPayload, type NotifyPayload, type XpPayload } from "./bridge";
 import { getZone, passThreshold, scoreFromQuiz, zones } from "./data/zones";
 import { QUEST_TEACHER_NAMES } from "./data/npcs";
-import { portraitPath } from "./config/sprites";
+import { PLAYER_KEY, PLAYABLE_CHARACTERS, portraitPath } from "./config/sprites";
 import MainWorldScene from "./scenes/MainWorldScene";
 import PreloadScene from "./scenes/PreloadScene";
 import { MusicSystem } from "./systems/MusicSystem";
@@ -39,6 +39,12 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
   const [displayedText, setDisplayedText] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
+  const [showPlayerPicker, setShowPlayerPicker] = useState(false);
+  const [playerKey, setPlayerKey] = useState(() => {
+    if (typeof window === "undefined") return PLAYER_KEY;
+    const saved = window.localStorage.getItem("constual-player-key");
+    return saved && PLAYABLE_CHARACTERS.some((c) => c.key === saved) ? saved : PLAYER_KEY;
+  });
   const [form, setForm] = useState({ displayName: "", constualUsername: "", xUsername: "", preferredLanguage: 1 });
 
   const pushToast = useCallback((kind: Toast["kind"], message: string) => {
@@ -76,6 +82,7 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
         scene: [PreloadScene, MainWorldScene],
       });
       gameRef.current = phaserGame;
+      phaserGame.registry.set("playerKey", playerKey);
       // keep the canvas matched to the container as mobile chrome shows/hides
       ro = new ResizeObserver(() => {
         const g = gameRef.current;
@@ -186,6 +193,13 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
     gameRef.current?.registry.set("hud", payload);
     gameBridge.emit("hud:update", payload);
   }, [account, profile]);
+
+  // React -> Phaser: selected player character
+  useEffect(() => {
+    window.localStorage.setItem("constual-player-key", playerKey);
+    gameRef.current?.registry.set("playerKey", playerKey);
+    gameBridge.emit("player:select", { key: playerKey });
+  }, [playerKey]);
 
   // wallet actions
   const connect = useCallback(async () => {
@@ -338,6 +352,7 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
   const shortAddr = account ? `${account.slice(0, 6)}…${account.slice(-4)}` : null;
   const xpNum = profile ? Number(profile.xp) : 0;
   const badgeNum = profile ? Number(profile.badgeCount) : 0;
+  const selectedPlayer = PLAYABLE_CHARACTERS.find((c) => c.key === playerKey) ?? PLAYABLE_CHARACTERS[0];
 
   return (
     <div className="cg-root">
@@ -345,12 +360,16 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
 
       {/* top bar: exit + wallet */}
       <div className="cg-topbar">
-        <div style={{ display: "flex", gap: 8 }}>
+        <div className="cg-topbar-left">
           <button className="cg-btn cg-btn-ghost" type="button" onClick={() => (onExit ? onExit() : window.history.back())}>
             ← Exit
           </button>
           <button className="cg-btn cg-btn-ghost" type="button" onClick={toggleMute} aria-label="Toggle music">
             {muted ? "🔇" : "🔊"}
+          </button>
+          <button className="cg-btn cg-btn-ghost cg-player-button" type="button" onClick={() => setShowPlayerPicker(true)}>
+            <img src={portraitPath(selectedPlayer.key)} alt="" />
+            <span>{selectedPlayer.label}</span>
           </button>
         </div>
         <div className="cg-wallet">
@@ -405,6 +424,36 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
             <button className="cg-btn cg-btn-primary cg-intro-start" type="button" onClick={() => setShowIntro(false)}>
               ▶ Start Exploring
             </button>
+          </div>
+        </div>
+      )}
+
+      {showPlayerPicker && (
+        <div className="cg-overlay cg-character-overlay">
+          <div className="cg-panel cg-character-panel">
+            <div className="cg-character-head">
+              <div>
+                <div className="cg-progress">PLAYER CHARACTER</div>
+                <h3>Choose who you want to move</h3>
+              </div>
+              <button className="cg-btn cg-btn-ghost" type="button" onClick={() => setShowPlayerPicker(false)}>Close</button>
+            </div>
+            <div className="cg-character-grid">
+              {PLAYABLE_CHARACTERS.map((character) => (
+                <button
+                  key={character.key}
+                  className={`cg-character-card ${character.key === playerKey ? "cg-selected-player" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    setPlayerKey(character.key);
+                    setShowPlayerPicker(false);
+                  }}
+                >
+                  <img src={portraitPath(character.key)} alt="" />
+                  <span>{character.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

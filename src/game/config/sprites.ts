@@ -136,6 +136,34 @@ export const ALL_SPRITES: CharSprite[] = Object.values(SPRITES);
 
 export const PLAYER_KEY = "siggy";
 
+const PLAYER_LABELS: Record<string, string> = {
+  siggy: "Siggy Black Cat",
+  siggy_anime: "Siggy Anime Girl",
+  nxr: "NXR",
+  rz: "RZ",
+  ng: "NG",
+  baemax: "Baemax",
+  billiebed: "Billiebed",
+  batagor: "Batagor",
+  icebear: "Icebear",
+  dikzzy: "Dikzzy",
+  nadsar: "Nadsar",
+  skylaaark: "Skylaaark",
+  oyeng: "Oyeng",
+  juggernaut: "Juggernaut",
+  keybi: "Keybi",
+  callmehann: "Callmehann",
+};
+
+function labelFromKey(key: string): string {
+  return PLAYER_LABELS[key] ?? key.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+}
+
+export const PLAYABLE_CHARACTERS = ALL_SPRITES.map((sprite) => ({
+  key: sprite.key,
+  label: labelFromKey(sprite.key),
+}));
+
 /** Full Phaser animation key for a character + anim name. */
 export function animKey(charKey: string, name: string): string {
   return `${charKey}-${name}`;
