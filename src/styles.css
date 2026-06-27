@@ -3029,11 +3029,17 @@ html[data-theme="dark"] .site {
 }
 /* keep lime-accent surfaces readable (dark text on light-green) */
 html[data-theme="dark"] .btn-lime,
-html[data-theme="dark"] .btn-dark,
 html[data-theme="dark"] .wallet-connect,
 html[data-theme="dark"] .nav-pill .active,
-html[data-theme="dark"] .nav-pill .active * {
+html[data-theme="dark"] .nav-pill .active *,
+html[data-theme="dark"] .segmented .active,
+html[data-theme="dark"] .language-toggle .active {
   color: #14210a !important;
+}
+html[data-theme="dark"] .btn-dark {
+  color: var(--color-ink) !important;
+  background: #101827 !important;
+  border-color: var(--color-line);
 }
 /* every surface that was hard-coded white/near-white in light mode */
 html[data-theme="dark"] .card,
@@ -3206,4 +3212,42 @@ html[data-theme="dark"] .site .person-card {
 }
 html[data-theme="dark"] .site .person-card span {
   color: #8fe0b4 !important; /* role label stays a readable green accent */
+}
+
+/* /agent dark mode contrast fixes. The scenario picker and orbit chips were
+   inheriting light text on lime/white surfaces after token flipping. */
+html[data-theme="dark"] .site .agent-orbit-card {
+  color: var(--color-charcoal) !important;
+  background: rgba(21, 27, 44, 0.94) !important;
+  border: 1px solid var(--color-line);
+}
+html[data-theme="dark"] .site .scenario-list button {
+  color: var(--color-charcoal) !important;
+  background: rgba(255, 255, 255, 0.055) !important;
+  border: 1px solid transparent;
+}
+html[data-theme="dark"] .site .scenario-list button.active {
+  color: var(--color-charcoal) !important;
+  background: rgba(200, 241, 105, 0.16) !important;
+  border-color: rgba(200, 241, 105, 0.32);
+}
+html[data-theme="dark"] .site .scenario-list span {
+  color: #14210a !important;
+}
+html[data-theme="dark"] .site .agent-report div,
+html[data-theme="dark"] .site .typing-card {
+  color: var(--color-charcoal) !important;
+  background: rgba(255, 255, 255, 0.055) !important;
+}
+html[data-theme="dark"] .site .module-buttons button {
+  color: var(--color-charcoal) !important;
+  background: rgba(255, 255, 255, 0.055) !important;
+  border-color: var(--color-line);
+}
+html[data-theme="dark"] .site .module-buttons button:hover {
+  color: #14210a !important;
+  background: var(--color-lime) !important;
+}
+html[data-theme="dark"] .mobile-menu button:hover {
+  color: #14210a !important;
 }
