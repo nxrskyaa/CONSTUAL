@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { animKey, PLAYER_KEY } from "../config/sprites";
-import { NPCS, npcDialogLines, type NpcDef } from "../data/npcs";
+import { NPCS, QUEST_TEACHER_NAMES, npcDialogLines, type NpcDef } from "../data/npcs";
 import { zones } from "../data/zones";
 import { gameBridge, type HudPayload, type WalletState } from "../bridge";
 import { WeatherSystem } from "../systems/WeatherSystem";
@@ -13,7 +13,7 @@ const MAP_H = 40;
 const WORLD_W = MAP_W * TILE_SIZE; // 1600
 const WORLD_H = MAP_H * TILE_SIZE; // 1280
 const INTERACT_RANGE = 84;
-const CAM_ZOOM = 1.5;
+const DESKTOP_CAM_ZOOM = 1.34;
 const PLAYER_SCALE = 0.27; // the player is a small cat — kept slightly under the NPCs
 const NPC_SCALE = 0.32;
 const NPC_TOP = Math.round(220 * NPC_SCALE * 0.8); // px above a sprite's anchor for tags
@@ -33,10 +33,6 @@ interface Npc {
   tag: Phaser.GameObjects.Text;
   bubble: Phaser.GameObjects.Text;
   phase: number;
-  fishLine?: Phaser.GameObjects.Graphics;
-  bobber?: Phaser.GameObjects.Image;
-  fishingRod?: Phaser.GameObjects.Image;
-  fishSide?: 1 | -1;
 }
 
 export default class MainWorldScene extends Phaser.Scene {
@@ -94,7 +90,7 @@ export default class MainWorldScene extends Phaser.Scene {
 
     // camera: set zoom ONCE, smooth follow. roundPixels avoids tile-seam
     // tearing/shimmer while the camera pans (esp. on high-DPI mobile screens).
-    this.cameras.main.setZoom(CAM_ZOOM);
+    this.cameras.main.setZoom(this.getCameraZoom());
     this.cameras.main.setRoundPixels(true);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
 
@@ -146,7 +142,18 @@ export default class MainWorldScene extends Phaser.Scene {
 
   private onResize(gameSize: Phaser.Structs.Size): void {
     this.cameras.main.setSize(gameSize.width, gameSize.height);
+    this.cameras.main.setZoom(this.getCameraZoom());
+    this.refreshHud();
     this.repositionUi();
+  }
+
+  private getCameraZoom(): number {
+    const w = this.scale.width;
+    const h = this.scale.height;
+    if (w <= 480 || h <= 480) return 1;
+    if (w <= 768) return 1.12;
+    if (w <= 1024) return 1.24;
+    return DESKTOP_CAM_ZOOM;
   }
 
   // ---------------------------------------------------------------- textures
@@ -374,6 +381,10 @@ export default class MainWorldScene extends Phaser.Scene {
 
   private nearPondTile(tx: number, ty: number, pad = 2): boolean {
     return tx >= POND.tx - pad && tx < POND.tx + POND.tw + pad && ty >= POND.ty - pad && ty < POND.ty + POND.th + pad;
+  }
+
+  private nearNpcTile(tx: number, ty: number, pad = 2): boolean {
+    return NPCS.some((npc) => Math.abs(npc.tileX - tx) <= pad && Math.abs(npc.tileY - ty) <= pad);
   }
 
   // pond bounds in world px (with a margin) so NPCs never wander into the water
@@ -670,18 +681,20 @@ export default class MainWorldScene extends Phaser.Scene {
       const a = this.areaOf(tx, ty);
       if (a === "plaza" || a === "desert" || a === "mystic") return;
       if (this.nearPondTile(tx, ty, 2)) return;
+      if (this.nearNpcTile(tx, ty, 2)) return;
       const key = this.textures.exists("env_tree") ? "env_tree" : Phaser.Math.Between(0, 1) ? "tree" : "tree2";
-      sway.push(this.addSolidImage(tx * ts + ts / 2, ty * ts + ts, key, 1, 0.3, 0.16));
+      const scale = key === "env_tree" ? 0.76 : 0.9;
+      sway.push(this.addSolidImage(tx * ts + ts / 2, ty * ts + ts, key, scale, 0.3, 0.16));
     };
-    for (let x = 0; x < MAP_W; x++) {
+    for (let x = 0; x < MAP_W; x += 4) {
       tryTree(x, 0);
       tryTree(x, MAP_H - 1);
     }
-    for (let y = 0; y < MAP_H; y++) {
+    for (let y = 1; y < MAP_H; y += 4) {
       tryTree(0, y);
       tryTree(MAP_W - 1, y);
     }
-    for (let i = 0; i < 40; i++) tryTree(Phaser.Math.Between(1, MAP_W - 2), Phaser.Math.Between(1, MAP_H - 2));
+    for (let i = 0; i < 10; i++) tryTree(Phaser.Math.Between(1, MAP_W - 2), Phaser.Math.Between(1, MAP_H - 2));
 
     for (const t of sway) {
       this.tweens.add({
@@ -705,7 +718,7 @@ export default class MainWorldScene extends Phaser.Scene {
       for (let i = 0; i < count; i++) {
         const tx = Phaser.Math.Between(2, MAP_W - 2);
         const ty = Phaser.Math.Between(2, MAP_H - 2);
-        if (this.areaOf(tx, ty) === "plaza" || this.nearPondTile(tx, ty, 1)) continue;
+        if (this.areaOf(tx, ty) === "plaza" || this.nearPondTile(tx, ty, 1) || this.nearNpcTile(tx, ty, 1)) continue;
         const img = this.add.image(tx * ts, ty * ts, key).setOrigin(0.5, 1);
         img.setDepth(ty * ts);
       }
@@ -717,7 +730,7 @@ export default class MainWorldScene extends Phaser.Scene {
       for (let i = 0; i < 90; i++) {
         const tx = Phaser.Math.Between(2, MAP_W - 2);
         const ty = Phaser.Math.Between(2, MAP_H - 2);
-        if (this.areaOf(tx, ty) === "plaza" || this.nearPondTile(tx, ty, 1)) continue;
+        if (this.areaOf(tx, ty) === "plaza" || this.nearPondTile(tx, ty, 1) || this.nearNpcTile(tx, ty, 1)) continue;
         const key = Phaser.Utils.Array.GetRandom(["env_grass_1", "env_grass_2", "env_grass_3"]);
         const img = this.add.image(tx * ts + Phaser.Math.Between(-8, 8), ty * ts + Phaser.Math.Between(4, 15), key).setOrigin(0.5, 1);
         img.setDepth(ty * ts - 1).setScale(Phaser.Math.FloatBetween(0.7, 1.15));
@@ -740,7 +753,7 @@ export default class MainWorldScene extends Phaser.Scene {
     for (let i = 0; i < 50; i++) {
       const tx = Phaser.Math.Between(2, MAP_W - 2);
       const ty = Phaser.Math.Between(2, MAP_H - 2);
-      if (this.nearPondTile(tx, ty, 1)) continue;
+      if (this.nearPondTile(tx, ty, 1) || this.nearNpcTile(tx, ty, 1)) continue;
       const b = this.add.image(tx * ts, ty * ts, "blade").setOrigin(0.5, 1).setDepth(ty * ts - 1).setScale(Phaser.Math.FloatBetween(0.8, 1.4));
       this.tweens.add({ targets: b, angle: Phaser.Math.FloatBetween(6, 12), duration: Phaser.Math.Between(1200, 2200), yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     }
@@ -757,15 +770,17 @@ export default class MainWorldScene extends Phaser.Scene {
       this.addStaticCollider(hq.x, hq.y - 48, 118, 96);
     }
 
-    // Prefer the updated D:/assetsupdate building art, with older b1-b9 as fallback fill.
+    // Keep landmarks spaced out so NPC tags and bodies stay readable.
     const refs: [string, number, number][] = [
-      ["env_building_1", 9, 9], ["b5", 16, 8], // forest
-      ["env_building_2", 9, 33], ["b8", 17, 34], // coast
-      ["env_building_3", 41, 9], ["b7", 34, 8], // desert
-      ["env_pusat_korupsi", 31, 14], ["env_dprsampah", 46, 25], // new civic landmarks
-      ["b4", 40, 30], ["env_building_1", 32, 33], ["b9", 44, 35], // mystic
+      ["env_building_2", 9, 34], ["b8", 18, 36], // coast
+      ["env_building_3", 39, 6], // desert
+      ["env_pusat_korupsi", 47, 22], ["env_dprsampah", 46, 36], // new civic landmarks
+      ["b4", 42, 34], // mystic edge
     ];
-    for (const [key, tx, ty] of refs) this.addBuildingImage(tx * ts, ty * ts, key, 0.66);
+    for (const [key, tx, ty] of refs) {
+      if (this.nearNpcTile(tx, ty, 2)) continue;
+      this.addBuildingImage(tx * ts, ty * ts, key, 0.66);
+    }
   }
 
   private addBuildingImage(x: number, y: number, key: string, scale: number, bodyW = 0.72, bodyH = 0.42): void {
@@ -890,8 +905,8 @@ export default class MainWorldScene extends Phaser.Scene {
       return;
     }
     if (act === "fish") {
-      this.setupFishing(npc, hx, hy);
-      return;
+      const pcx = (POND.tx + POND.tw / 2) * TILE_SIZE;
+      npc.visual.setFlipX(pcx < hx);
     }
     if (act === "dance") {
       this.scheduleDance(npc);
@@ -916,6 +931,7 @@ export default class MainWorldScene extends Phaser.Scene {
       sit: ["♪", "#9fe7ff"],
       train: ["✦", "#c8f169"],
     };
+    if (act === "fish") emotes.fish = ["~", "#9fe7ff"];
     const [sym, col] = emotes[act] ?? ["·", "#e8f4fd"];
     if (act === "sit") npc.visual.setFrame(0); // calmer pose
     const step = () => {
@@ -933,60 +949,6 @@ export default class MainWorldScene extends Phaser.Scene {
       this.time.delayedCall(Phaser.Math.Between(1800, 4200), step);
     };
     this.time.delayedCall(Phaser.Math.Between(300, 2200), step);
-  }
-
-  // Any "fish" NPC: a line + bobber cast toward the pond, with periodic nibbles
-  // and catches. The cast direction points at the pond centre so anglers on
-  // different banks all face the water. The line is redrawn in updateNpcs.
-  private setupFishing(npc: Npc, hx: number, hy: number): void {
-    const pcx = (POND.tx + POND.tw / 2) * TILE_SIZE;
-    const pcy = (POND.ty + POND.th / 2) * TILE_SIZE;
-    let dx = pcx - hx;
-    let dy = pcy - hy;
-    const len = Math.hypot(dx, dy) || 1;
-    dx /= len;
-    dy /= len;
-    const side: 1 | -1 = dx < 0 ? -1 : 1;
-    const cast = 92;
-    const waterX = POND.tx * TILE_SIZE;
-    const waterY = POND.ty * TILE_SIZE;
-    const waterW = POND.tw * TILE_SIZE;
-    const waterH = POND.th * TILE_SIZE;
-    const bx = Phaser.Math.Clamp(hx + dx * cast, waterX + 24, waterX + waterW - 24);
-    const by = Phaser.Math.Clamp(hy + dy * cast - 6, waterY + 22, waterY + waterH - 22);
-    npc.fishSide = side;
-    npc.visual.setFlipX(side < 0); // face the water
-    if (this.textures.exists("env_fish_rod")) {
-      npc.fishingRod = this.add
-        .image(hx + side * 13, hy - 28, "env_fish_rod")
-        .setOrigin(0.86, 0.82)
-        .setScale(0.45)
-        .setFlipX(side > 0)
-        .setDepth(hy + 1);
-    }
-    npc.bobber = this.textures.exists("env_fish_bobber")
-      ? this.add.image(bx, by, "env_fish_bobber").setScale(0.14).setDepth(2)
-      : this.add.image(bx, by, "fx_dot").setTint(0xff5d6c).setScale(2.2).setDepth(2);
-    npc.fishLine = this.add.graphics().setDepth(npc.container.y - 1);
-    this.tweens.add({ targets: npc.bobber, y: by - 3, duration: 1300, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-
-    const loop = () => {
-      if (!npc.container.active || !npc.bobber) return;
-      // a nibble: bobber dips, then a catch
-      this.tweens.add({
-        targets: npc.bobber,
-        y: by + 7,
-        duration: 160,
-        yoyo: true,
-        repeat: 2,
-        onComplete: () => {
-          this.emote(npc, "!", "#ffe066");
-          this.time.delayedCall(420, () => this.emote(npc, "★", "#9be15d"));
-        },
-      });
-      this.time.delayedCall(Phaser.Math.Between(4500, 8500), loop);
-    };
-    this.time.delayedCall(Phaser.Math.Between(1800, 3600), loop);
   }
 
   // Absol-style dancing: stays put and busts a gentle looping move.
@@ -1372,7 +1334,11 @@ export default class MainWorldScene extends Phaser.Scene {
 
   private refreshHud(): void {
     const done = Math.max(this.hud.completed, this.completedZones.size);
-    this.questText?.setText(`QUEST  ${done}/${this.hud.total}\nFind all 5 teachers`);
+    const names = QUEST_TEACHER_NAMES.map((name) => (name === "Siggy Anime Girl" ? "Siggy" : name));
+    const teacherGuide = this.scale.width < 520
+      ? `EXP: ${names.slice(0, 3).join(" / ")}\n${names.slice(3).join(" / ")}`
+      : `Talk: ${names.join(" / ")}`;
+    this.questText?.setText(`QUEST  ${done}/${this.hud.total}\n${teacherGuide}`);
   }
 
   private repositionUi(): void {
@@ -1541,9 +1507,6 @@ export default class MainWorldScene extends Phaser.Scene {
       const visible = Phaser.Geom.Rectangle.Overlaps(view, new Phaser.Geom.Rectangle(n.container.x - 60, n.container.y - 100, 120, 140));
       n.container.setVisible(visible);
       n.tag.setVisible(visible);
-      n.bobber?.setVisible(visible);
-      n.fishLine?.setVisible(visible);
-      n.fishingRod?.setVisible(visible);
       if (!visible) {
         n.bubble.setVisible(false);
         continue;
@@ -1554,27 +1517,6 @@ export default class MainWorldScene extends Phaser.Scene {
       n.container.setDepth(n.container.y);
       n.tag.setPosition(n.container.x, n.container.y - NPC_TOP).setDepth(n.container.y + 1);
       n.bubble.setPosition(n.container.x, n.container.y - NPC_TOP - 12).setDepth(n.container.y + 1);
-      // redraw the fishing line from the angler's hand to the bobber
-      if (n.fishLine && n.bobber) {
-        const side = n.fishSide ?? (n.visual.flipX ? -1 : 1);
-        const handX = n.container.x + side * 13;
-        const handY = n.container.y - 28;
-        const lineStartX = handX + side * 34;
-        const lineStartY = handY - 34;
-        if (n.fishingRod) {
-          n.fishingRod
-            .setPosition(handX, handY)
-            .setFlipX(side > 0)
-            .setDepth(n.container.y + 1);
-        }
-        n.fishLine.clear();
-        n.fishLine.lineStyle(1.5, 0xffffff, 0.75);
-        n.fishLine.beginPath();
-        n.fishLine.moveTo(lineStartX, lineStartY);
-        n.fishLine.lineTo(n.bobber.x, n.bobber.y);
-        n.fishLine.strokePath();
-        n.fishLine.setDepth(n.container.y + 2);
-      }
     }
   }
 }

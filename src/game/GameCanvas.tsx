@@ -6,6 +6,7 @@ import { useConstualGame } from "../hooks/useConstualGame";
 import "./game.css";
 import { gameBridge, type DialogPayload, type NotifyPayload, type XpPayload } from "./bridge";
 import { getZone, passThreshold, scoreFromQuiz, zones } from "./data/zones";
+import { QUEST_TEACHER_NAMES } from "./data/npcs";
 import { portraitPath } from "./config/sprites";
 import MainWorldScene from "./scenes/MainWorldScene";
 import PreloadScene from "./scenes/PreloadScene";
@@ -398,6 +399,7 @@ export default function GameCanvas({ onExit }: { onExit?: () => void }) {
               <li><b>Move</b> — WASD / Arrow keys, or just tap/click where you want to go</li>
               <li><b>Talk</b> — tap a character (or walk up and press <span className="cg-key">E</span>) — look for the <span className="cg-key">!</span></li>
               <li><b>Learn &amp; earn</b> — 5 teachers give quizzes; pass them to record quests on Ritual Testnet</li>
+              <li><b>EXP teachers</b> - {QUEST_TEACHER_NAMES.join(", ")}</li>
               <li><b>Tip</b> — connect your wallet &amp; create a Passport to save progress on-chain</li>
             </ul>
             <button className="cg-btn cg-btn-primary cg-intro-start" type="button" onClick={() => setShowIntro(false)}>

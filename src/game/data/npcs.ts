@@ -685,6 +685,8 @@ export const NPCS: NpcDef[] = [
   },
 ];
 
+export const QUEST_TEACHER_NAMES = NPCS.filter((npc) => npc.zoneId != null).map((npc) => npc.name);
+
 /** Dialog lines for an NPC, pulling from its zone when it's a quest-giver. */
 export function npcDialogLines(npc: NpcDef): string[] {
   if (npc.zoneId != null) {
