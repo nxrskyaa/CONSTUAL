@@ -95,12 +95,22 @@ const CHARACTERS = [
   { key: "callmehann", file: "newcharac/callmehann.png", frames: 4 },
 
   // --- extra community roster ---
-  { key: "kai", file: "newcharac/Kai.png", frames: 4 },
+  { key: "kai", file: "newcharac/Kai.png", frames: 4, dilate: 1 },
   { key: "qaziharis", file: "newcharac/QaziHaris.png", frames: 4 },
   { key: "cici", file: "newcharac/Cici.png", frames: 4 },
   { key: "babysyen", file: "newcharac/BabySyen.png", frames: 4 },
   { key: "oxshee", file: "newcharac/OxShee.png", frames: 4 },
-  { key: "chocothins", file: "newcharac/ChocoThins.png", frames: 4 },
+  {
+    key: "chocothins",
+    file: "newcharac/ChocoThins.png",
+    frames: 4,
+    boxes: [
+      { minX: 6, minY: 242, maxX: 201, maxY: 543, w: 196, h: 302 },
+      { minX: 203, minY: 242, maxX: 366, maxY: 543, w: 164, h: 302 },
+      { minX: 387, minY: 242, maxX: 566, maxY: 543, w: 180, h: 302 },
+      { minX: 592, minY: 242, maxX: 756, maxY: 543, w: 165, h: 302 },
+    ],
+  },
   { key: "yetece", file: "newcharac/Yetece.png", frames: 4 },
   { key: "furiju", file: "newcharac/FuriJu.png", frames: 4 },
   { key: "firless", file: "newcharac/Firless.png", frames: 4 },
@@ -287,10 +297,10 @@ function main() {
     const png = PNG.sync.read(fs.readFileSync(srcPath));
     const { width: w, height: h } = png;
     const fg = buildForeground(png);
-    const dil = dilate(fg, w, h, DILATE);
+    const dil = dilate(fg, w, h, ch.dilate ?? DILATE);
     let boxes = components(dil, fg, w, h);
     boxes = readingOrder(boxes);
-    const picked = boxes.slice(0, ch.frames);
+    const picked = ch.boxes ?? boxes.slice(0, ch.frames);
     if (picked.length === 0) { console.warn("NO SPRITES for", ch.key); continue; }
 
     // game strip (magenta bg, uniform frames)
