@@ -143,6 +143,7 @@ export const SPRITES: Record<string, CharSprite> = {
   firless: { key: "firless", file: "characters/firless.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   cheastersaz: { key: "cheastersaz", file: "characters/cheastersaz.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   piktawr: { key: "piktawr", file: "characters/piktawr.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  oxdenta: { key: "oxdenta", file: "characters/oxdenta.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
 };
 
 export const ALL_SPRITES: CharSprite[] = Object.values(SPRITES);
@@ -177,6 +178,7 @@ const PLAYER_LABELS: Record<string, string> = {
   firless: "Firless",
   cheastersaz: "CheasterSaz",
   piktawr: "Piktawr",
+  oxdenta: "OxDenta",
 };
 
 function labelFromKey(key: string): string {

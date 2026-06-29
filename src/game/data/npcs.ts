@@ -786,6 +786,15 @@ export const NPCS: NpcDef[] = [
       "Train your habits before burnout forces you to stop.",
     ],
   },
+  {
+    key: "oxdenta", name: "OxDenta", spriteKey: "oxdenta", area: "plaza",
+    tileX: 18, tileY: 23, wander: true, zoneId: null, accent: 0x9fd0ff,
+    dialog: [
+      "OxDenta keeps a calm watch over the plaza routine.",
+      "Sugar awareness helps your teeth, energy, and long-term habits.",
+      "Brush, drink water, and give your body simple routines it can trust.",
+    ],
+  },
 ];
 
 export const QUEST_TEACHER_NAMES = NPCS.filter((npc) => npc.zoneId != null).map((npc) => npc.name);
