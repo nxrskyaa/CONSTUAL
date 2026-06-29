@@ -130,6 +130,18 @@ export const SPRITES: Record<string, CharSprite> = {
   juggernaut: { key: "juggernaut", file: "characters/juggernaut.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   keybi: { key: "keybi", file: "characters/keybi.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
   callmehann: { key: "callmehann", file: "characters/callmehann.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+
+  // --- extra community roster ---
+  kai: { key: "kai", file: "characters/kai.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  qaziharis: { key: "qaziharis", file: "characters/qaziharis.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  cici: { key: "cici", file: "characters/cici.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  babysyen: { key: "babysyen", file: "characters/babysyen.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  oxshee: { key: "oxshee", file: "characters/oxshee.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  chocothins: { key: "chocothins", file: "characters/chocothins.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  yetece: { key: "yetece", file: "characters/yetece.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  furiju: { key: "furiju", file: "characters/furiju.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  firless: { key: "firless", file: "characters/firless.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
+  cheastersaz: { key: "cheastersaz", file: "characters/cheastersaz.png", frameWidth: FW, frameHeight: FH, frameCount: 4, anims: npcAnims() },
 };
 
 export const ALL_SPRITES: CharSprite[] = Object.values(SPRITES);
@@ -153,6 +165,16 @@ const PLAYER_LABELS: Record<string, string> = {
   juggernaut: "Juggernaut",
   keybi: "Keybi",
   callmehann: "Callmehann",
+  kai: "Kai",
+  qaziharis: "QaziHaris",
+  cici: "Cici",
+  babysyen: "BabySyen",
+  oxshee: "OxShee",
+  chocothins: "ChocoThins",
+  yetece: "Yetece",
+  furiju: "FuriJu",
+  firless: "Firless",
+  cheastersaz: "CheasterSaz",
 };
 
 function labelFromKey(key: string): string {

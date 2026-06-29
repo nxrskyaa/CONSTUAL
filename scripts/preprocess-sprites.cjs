@@ -93,6 +93,18 @@ const CHARACTERS = [
   { key: "juggernaut", file: "newcharac/juggernaut.png", frames: 4 },
   { key: "keybi", file: "newcharac/keybi.png", frames: 4 },
   { key: "callmehann", file: "newcharac/callmehann.png", frames: 4 },
+
+  // --- extra community roster ---
+  { key: "kai", file: "newcharac/Kai.png", frames: 4 },
+  { key: "qaziharis", file: "newcharac/QaziHaris.png", frames: 4 },
+  { key: "cici", file: "newcharac/Cici.png", frames: 4 },
+  { key: "babysyen", file: "newcharac/BabySyen.png", frames: 4 },
+  { key: "oxshee", file: "newcharac/OxShee.png", frames: 4 },
+  { key: "chocothins", file: "newcharac/ChocoThins.png", frames: 4 },
+  { key: "yetece", file: "newcharac/Yetece.png", frames: 4 },
+  { key: "furiju", file: "newcharac/FuriJu.png", frames: 4 },
+  { key: "firless", file: "newcharac/Firless.png", frames: 4 },
+  { key: "cheastersaz", file: "newcharac/CheasterSaz.png", frames: 4 },
 ];
 
 // Single-image landmark buildings + flag -> transparent trimmed PNGs.

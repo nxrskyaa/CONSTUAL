@@ -683,6 +683,100 @@ export const NPCS: NpcDef[] = [
       "Call someone after this quest.",
     ],
   },
+
+  // ---------------------------------------------------------------------------
+  // Extra community roster from D:/characters/newcharac
+  // ---------------------------------------------------------------------------
+  {
+    key: "kai", name: "Kai", spriteKey: "kai", area: "forest",
+    tileX: 4, tileY: 16, wander: false, activity: "train", zoneId: null, accent: 0xc8f169,
+    dialog: [
+      "Kai is warming up near the forest trail.",
+      "A short walk before a long session helps your body wake up.",
+      "Start easy, keep it consistent, and let the habit compound.",
+    ],
+  },
+  {
+    key: "qaziharis", name: "QaziHaris", spriteKey: "qaziharis", area: "desert",
+    tileX: 36, tileY: 16, wander: true, zoneId: null, accent: 0xffb35c,
+    dialog: [
+      "QaziHaris here. Heat, caffeine, and long screen time can sneak up on you.",
+      "Keep water nearby and do not wait until a headache tells you to rest.",
+      "Good builders protect their focus by protecting their body.",
+    ],
+  },
+  {
+    key: "cici", name: "Cici", spriteKey: "cici", area: "plaza",
+    tileX: 30, tileY: 21, wander: false, activity: "gather", zoneId: null, accent: 0xff9bd2,
+    dialog: [
+      "Cici says hello from the plaza.",
+      "Community is healthier when people check in on each other.",
+      "Ask a friend how they are doing, not only what they are building.",
+    ],
+  },
+  {
+    key: "babysyen", name: "BabySyen", spriteKey: "babysyen", area: "coast",
+    tileX: 12, tileY: 33, wander: false, activity: "sit", zoneId: null, accent: 0x9fd0ff,
+    dialog: [
+      "BabySyen is taking a quiet break by the coast.",
+      "Rest does not mean you are falling behind.",
+      "A calmer nervous system makes better decisions.",
+    ],
+  },
+  {
+    key: "oxshee", name: "OxShee", spriteKey: "oxshee", area: "mystic",
+    tileX: 46, tileY: 30, wander: true, zoneId: null, accent: 0xc792ff,
+    dialog: [
+      "OxShee is roaming the mystic edge.",
+      "When your mind feels overloaded, reduce inputs before adding more tools.",
+      "Less noise can be a real productivity upgrade.",
+    ],
+  },
+  {
+    key: "chocothins", name: "ChocoThins", spriteKey: "chocothins", area: "forest",
+    tileX: 17, tileY: 6, wander: false, activity: "gather", zoneId: null, accent: 0xffd27a,
+    dialog: [
+      "ChocoThins brought snack wisdom.",
+      "Sweet treats are okay, but your energy lasts longer with protein, fiber, and water.",
+      "Do not let deadline mode turn every meal into random sugar.",
+    ],
+  },
+  {
+    key: "yetece", name: "Yetece", spriteKey: "yetece", area: "desert",
+    tileX: 44, tileY: 18, wander: false, activity: "gather", zoneId: null, accent: 0xff8f5c,
+    dialog: [
+      "Yetece is keeping the desert group organized.",
+      "Plan meals like you plan releases: simple, repeatable, and not last minute.",
+      "Your brain ships better when your body has fuel.",
+    ],
+  },
+  {
+    key: "furiju", name: "FuriJu", spriteKey: "furiju", area: "coast",
+    tileX: 20, tileY: 33, wander: true, zoneId: null, accent: 0x73b4ec,
+    dialog: [
+      "FuriJu is pacing near the coastal path.",
+      "If your back feels stiff, stand up and move before it gets loud.",
+      "Tiny posture resets beat one big fix later.",
+    ],
+  },
+  {
+    key: "firless", name: "Firless", spriteKey: "firless", area: "mystic",
+    tileX: 34, tileY: 32, wander: false, activity: "meditate", zoneId: null, accent: 0x9aa6ff,
+    dialog: [
+      "Firless is practicing a slow breathing loop.",
+      "You do not have to answer every notification immediately.",
+      "Pause, breathe, then choose what deserves your attention.",
+    ],
+  },
+  {
+    key: "cheastersaz", name: "CheasterSaz", spriteKey: "cheastersaz", area: "plaza",
+    tileX: 30, tileY: 24, wander: false, activity: "dance", zoneId: null, accent: 0x6ee7ff,
+    dialog: [
+      "CheasterSaz is keeping the plaza lively.",
+      "A little movement can change the mood of the whole day.",
+      "Stretch, dance, walk, anything. Just give your body a signal.",
+    ],
+  },
 ];
 
 export const QUEST_TEACHER_NAMES = NPCS.filter((npc) => npc.zoneId != null).map((npc) => npc.name);
