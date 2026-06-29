@@ -115,6 +115,7 @@ const CHARACTERS = [
   { key: "furiju", file: "newcharac/FuriJu.png", frames: 4 },
   { key: "firless", file: "newcharac/Firless.png", frames: 4 },
   { key: "cheastersaz", file: "newcharac/CheasterSaz.png", frames: 4 },
+  { key: "piktawr", file: "newcharac/PiktaWr.png", frames: 4 },
 ];
 
 // Single-image landmark buildings + flag -> transparent trimmed PNGs.

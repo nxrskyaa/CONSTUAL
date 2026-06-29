@@ -777,6 +777,15 @@ export const NPCS: NpcDef[] = [
       "Stretch, dance, walk, anything. Just give your body a signal.",
     ],
   },
+  {
+    key: "piktawr", name: "Piktawr", spriteKey: "piktawr", area: "desert",
+    tileX: 48, tileY: 14, wander: false, activity: "train", zoneId: null, accent: 0xff8f5c,
+    dialog: [
+      "Piktawr guards the desert trail with steady discipline.",
+      "Strong focus starts with simple basics: sleep, water, food, and movement.",
+      "Train your habits before burnout forces you to stop.",
+    ],
+  },
 ];
 
 export const QUEST_TEACHER_NAMES = NPCS.filter((npc) => npc.zoneId != null).map((npc) => npc.name);
